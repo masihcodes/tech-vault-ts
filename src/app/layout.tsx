@@ -1,9 +1,9 @@
+import { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Toaster } from 'sonner';
-import { Metadata } from "next";
 
 const jbMono = JetBrains_Mono({
   variable: '--font-jb-mono',

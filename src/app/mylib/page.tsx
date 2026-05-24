@@ -7,7 +7,7 @@ import MyLibs from '@/components/MyLibs';
 
 
 
-export default async function myLib() {
+export default async function MyLib() {
 
   const data = await getLibs();
   const myLibs = data?.filter(lib => lib.isBookmarked);

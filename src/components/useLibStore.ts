@@ -16,12 +16,13 @@ interface LibStoreState<T> {
   modalStatus: boolean,
   target: T,
   newEntryStatus: boolean;
+  myPass: string;
+  passModalStatus: boolean;
 }
 
 
 export const useLibStore = create<LibStoreState<LibraryItem>>()(() => ({
   modalStatus: false,
-
   target: {
     id: '',
     name: '',
@@ -32,8 +33,9 @@ export const useLibStore = create<LibStoreState<LibraryItem>>()(() => ({
     isBookmarked: false,
     personalNote: null,
   },
-
   newEntryStatus: true,
+  myPass: "",
+  passModalStatus: false
 }));
 
 
@@ -85,4 +87,14 @@ export function resetTarget() {
 
 export function setNewEntryStatus(input: boolean) {
   useLibStore.setState({ newEntryStatus: input });
+}
+
+
+export function setMyPass(input: string) {
+  useLibStore.setState({ myPass: input });
+}
+
+
+export function setPassModalStatus(input: boolean) {
+  useLibStore.setState({ passModalStatus: input });
 }

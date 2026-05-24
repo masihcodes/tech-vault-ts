@@ -1,8 +1,8 @@
 'use client';
 
 import { useActionState, useEffect, useTransition } from 'react';
-import { LibraryBig, Link, Loader, PackageX, Save, Terminal, X } from 'lucide-react';
-import { resetTarget, setModalStatus, useLibStore } from './useLibStore';
+import { KeyRound, LibraryBig, Link, Loader, PackageX, Save, Terminal, X } from 'lucide-react';
+import { resetTarget, setModalStatus, setMyPass, useLibStore } from './useLibStore';
 import { createLibAction, removeLibAction, updateLibAction } from '../app/action';
 import { toast } from 'sonner';
 
@@ -19,22 +19,28 @@ export default function Modal() {
 
   const [state, formAction, pending] = useActionState<ActionResponse | null, FormData>(newEntryStatus ? createLibAction : updateLibAction.bind(null, target), null,);
 
+
+
+
+
   const [delPending, startTransition] = useTransition();
-
-
+  const myPass = useLibStore(s => s.myPass);
 
   function handleDelete() {
     startTransition(async () => {
-      const res = await removeLibAction(target.id);
+      const res = await removeLibAction(target.id, myPass);
       if (res.success) {
         toast.success(res?.message);
+        setModalStatus(false);
+        setMyPass("");
+        resetTarget();
       } else {
         toast.error(res?.message);
       }
     });
-    setModalStatus(false);
-    resetTarget();
   }
+
+
 
 
 
@@ -43,6 +49,7 @@ export default function Modal() {
       setModalStatus(false);
       resetTarget();
       toast.success(state.message);
+      setMyPass("");
     }
     if (state && !state.success) {
       toast.error(state.message);
@@ -69,6 +76,7 @@ export default function Modal() {
                 onClick={() => {
                   setModalStatus(false);
                   resetTarget();
+                  setMyPass("");
                 }}>
                 <X />
               </button>
@@ -138,12 +146,28 @@ export default function Modal() {
                 </div>
               </label>
 
+              <label className='mb-1 block text-sm font-medium text-slate-400'>
+                Password
+                <div className='relative mt-1'>
+                  <KeyRound className='absolute left-3 top-3 text-slate-500' />
+                  <input
+                    value={myPass}
+                    onChange={e => setMyPass(e.target.value)}
+                    name='password'
+                    type='password'
+                    placeholder='Enter the PASSWORD ...'
+                    className='w-full rounded-lg border border-slate-700 bg-slate-950 py-3 pl-11 pr-3 text-sm text-white transition-colors focus:border-cyan-500 focus:outline-none'
+                  />
+                </div>
+              </label>
+
               <div className='mt-10 flex flex-col items-center justify-center gap-5 border-t border-slate-800 pt-5 sm:flex-row'>
                 <button
                   type='button'
                   onClick={() => {
                     setModalStatus(false);
                     resetTarget();
+                    setMyPass("");
                   }}
                   className='rounded-lg px-5 py-2.5 font-medium text-slate-300 transition-colors hover:bg-slate-800'>
                   Cancel
