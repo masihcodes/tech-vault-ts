@@ -38,6 +38,8 @@ export default function Modal() {
       } else {
         toast.error(res?.message);
       }
+      window.dispatchEvent(new Event('libs-updated'));
+      window.dispatchEvent(new Event('mylib-updated'));
     });
     setModalStatus(false);
     resetTarget();
