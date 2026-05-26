@@ -2,6 +2,8 @@ import Modal from '@/components/Modal';
 import FilterBar from '@/components/FilterBar';
 import AddButton from '@/components/AddButton';
 import HomeLibList from '@/components/HomeLibList';
+import { ErrorBoundary } from 'react-error-boundary';
+import ErrorHandler from '@/components/ErrorHandler';
 
 interface PageProps {
   searchParams: Promise<{
@@ -32,7 +34,11 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       </header>
 
-      <HomeLibList query={query} sort={sort} />
+      <ErrorBoundary fallbackRender={ErrorHandler}>
+        <HomeLibList query={query} sort={sort} />
+      </ErrorBoundary>
+
+
 
       <Modal />
     </>
