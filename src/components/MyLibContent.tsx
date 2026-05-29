@@ -6,12 +6,14 @@ import { Activity, Database, LogIn } from 'lucide-react';
 import { getBookmarkedLibsAction } from '@/app/auth/action';
 import { getAuthCredentials } from '@/components/authStorage';
 import MyLibs from '@/components/MyLibs';
-import { LibraryItem } from '@/components/useLibStore';
+import { LibraryItem, useLibStore } from '@/components/useLibStore';
 
 export default function MyLibContent() {
   const [myLibs, setMyLibs] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const isAuthenticated = useLibStore(s => s.isAuthenticated);
+  const refreshMyLibTrigger = useLibStore(s => s.refreshMyLibTrigger);
 
   useEffect(() => {
     let cancelled = false;
@@ -22,14 +24,12 @@ export default function MyLibContent() {
 
       if (!credentials) {
         if (!cancelled) {
-          setIsAuthenticated(false);
           setMyLibs([]);
           setLoading(false);
         }
         return;
       }
 
-      setIsAuthenticated(true);
       try {
         const data = await getBookmarkedLibsAction(credentials);
         if (!cancelled) setMyLibs(data);
@@ -40,18 +40,14 @@ export default function MyLibContent() {
       }
     }
 
-    loadMyLibs();
-
-    function handleUpdate() {
+    if (isAuthenticated) {
       loadMyLibs();
     }
 
-    window.addEventListener('mylib-updated', handleUpdate);
     return () => {
       cancelled = true;
-      window.removeEventListener('mylib-updated', handleUpdate);
     };
-  }, []);
+  }, [isAuthenticated, refreshMyLibTrigger]);
 
   if (loading) {
     return <div className="animate-pulse py-12 text-center text-cyan-500">Loading ... ⏳</div>;

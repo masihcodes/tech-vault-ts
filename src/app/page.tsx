@@ -4,6 +4,8 @@ import AddButton from '@/components/AddButton';
 import HomeLibList from '@/components/HomeLibList';
 import { ErrorBoundary } from 'react-error-boundary';
 import ErrorHandler from '@/components/ErrorHandler';
+import SignInModal from '@/components/SignInModal';
+import SignUpModal from '@/components/SignUpModal';
 
 interface PageProps {
   searchParams: Promise<{
@@ -38,9 +40,9 @@ export default async function Home({ searchParams }: PageProps) {
         <HomeLibList query={query} sort={sort} />
       </ErrorBoundary>
 
-
-
       <Modal />
+      <SignInModal />
+      <SignUpModal />
     </>
   );
 }

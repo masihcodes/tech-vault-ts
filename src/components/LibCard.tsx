@@ -1,22 +1,21 @@
 'use client';
 
 import { useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Bookmark, BookmarkPlus, Box, Loader, SquareArrowOutUpRight } from 'lucide-react';
-import { LibraryItem, setModalStatus, setNewEntryStatus, setTarget } from './useLibStore';
+import { LibraryItem, setModalStatus, setNewEntryStatus, setSignInModalStatus, setTarget, toggleHomeRefresh, toggleMyLibRefresh } from './useLibStore';
 import { isBookmarkedAction } from '@/app/action';
 import { getAuthCredentials } from './authStorage';
 import { toast } from 'sonner';
 
 export default function LibCard({ lib }: { lib: LibraryItem; }) {
-  const router = useRouter();
+
   const [pending, startTransition] = useTransition();
 
   function handleBookmark(lib: LibraryItem) {
     const credentials = getAuthCredentials();
     if (!credentials) {
       toast.error('Please sign in to bookmark libraries');
-      router.push('/sign-in');
+      setSignInModalStatus(true);
       return;
     }
 
@@ -24,8 +23,10 @@ export default function LibCard({ lib }: { lib: LibraryItem; }) {
       const res = await isBookmarkedAction(lib, credentials);
       if (res.success) {
         toast.success(res.message);
-        window.dispatchEvent(new Event('libs-updated'));
-        window.dispatchEvent(new Event('mylib-updated'));
+        toggleHomeRefresh();
+        toggleMyLibRefresh();
+        // window.dispatchEvent(new Event('libs-updated'));
+        // window.dispatchEvent(new Event('mylib-updated'));
       } else {
         toast.error(res.message);
       }
@@ -54,7 +55,8 @@ export default function LibCard({ lib }: { lib: LibraryItem; }) {
             const credentials = getAuthCredentials();
             if (!credentials) {
               toast.error('Please sign in to bookmark libraries');
-              router.push('/sign-in');
+              // router.push('/sign-in');
+              setSignInModalStatus(true);
               return;
             }
             setModalStatus(true);

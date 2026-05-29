@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useTransition } from 'react';
 import { LibraryBig, Link, Loader, PackageX, Save, Terminal, X } from 'lucide-react';
-import { resetTarget, setModalStatus, useLibStore } from './useLibStore';
+import { resetTarget, setModalStatus, toggleHomeRefresh, toggleMyLibRefresh, useLibStore } from './useLibStore';
 import { createLibAction, removeLibAction, updateLibAction } from '../app/action';
 import { getAuthCredentials } from './authStorage';
 import { toast } from 'sonner';
@@ -38,8 +38,8 @@ export default function Modal() {
       } else {
         toast.error(res?.message);
       }
-      window.dispatchEvent(new Event('libs-updated'));
-      window.dispatchEvent(new Event('mylib-updated'));
+      toggleHomeRefresh();
+      toggleMyLibRefresh();
     });
     setModalStatus(false);
     resetTarget();
@@ -52,12 +52,9 @@ export default function Modal() {
       setModalStatus(false);
       resetTarget();
       toast.success(state.message);
-    }
-
-    window.dispatchEvent(new Event('libs-updated'));
-    window.dispatchEvent(new Event('mylib-updated'));
-
-    if (state && !state.success) {
+      toggleHomeRefresh();
+      toggleMyLibRefresh();
+    } else if (state && !state.success) {
       toast.error(state.message);
     }
   }, [state]);

@@ -1,18 +1,12 @@
 'use client';
 
 import { PackagePlus } from 'lucide-react';
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { isLoggedIn } from './authStorage';
-import { setModalStatus, setNewEntryStatus } from './useLibStore';
+
+import { setModalStatus, setNewEntryStatus, useLibStore } from './useLibStore';
 
 export default function AddButton() {
-  const path = usePathname();
-  const [authenticated, setAuthenticated] = useState(false);
 
-  useEffect(() => {
-    setAuthenticated(isLoggedIn());
-  }, [path]);
+  const authenticated = useLibStore(s => s.isAuthenticated);
 
   if (!authenticated) return null;
 

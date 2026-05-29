@@ -17,9 +17,9 @@ import {
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { LibraryItem } from './useLibStore';
+import { LibraryItem, toggleHomeRefresh, toggleMyLibRefresh } from './useLibStore';
 
-export default function MyLibCard({ item }: { item: LibraryItem }) {
+export default function MyLibCard({ item }: { item: LibraryItem; }) {
   const router = useRouter();
   const [delPending, startDelTransition] = useTransition();
 
@@ -35,8 +35,9 @@ export default function MyLibCard({ item }: { item: LibraryItem }) {
       const res = await removeMyLibAction(item, credentials);
       if (res.success) {
         toast.success(res?.message);
-        window.dispatchEvent(new Event('mylib-updated'));
-        window.dispatchEvent(new Event('libs-updated'));
+        toggleHomeRefresh();
+        toggleMyLibRefresh();
+
       } else {
         toast.error(res?.message);
       }
@@ -59,7 +60,7 @@ export default function MyLibCard({ item }: { item: LibraryItem }) {
       const res = await personalNoteAction(updatedItem, credentials);
       if (res.success) {
         toast.success(res?.message);
-        window.dispatchEvent(new Event('mylib-updated'));
+        toggleMyLibRefresh();
       } else {
         toast.error(res?.message);
       }

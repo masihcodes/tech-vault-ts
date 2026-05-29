@@ -16,12 +16,17 @@ interface LibStoreState<T> {
   modalStatus: boolean,
   target: T,
   newEntryStatus: boolean;
+  signInModalStatus: boolean;
+  signUpModalStatus: boolean;
+  userName: string | null;
+  isAuthenticated: boolean;
+  refreshHomeTrigger: boolean;
+  refreshMyLibTrigger: boolean;
 }
 
 
 export const useLibStore = create<LibStoreState<LibraryItem>>()(() => ({
   modalStatus: false,
-
   target: {
     id: '',
     name: '',
@@ -34,6 +39,12 @@ export const useLibStore = create<LibStoreState<LibraryItem>>()(() => ({
   },
 
   newEntryStatus: true,
+  signInModalStatus: false,
+  signUpModalStatus: false,
+  userName: null,
+  isAuthenticated: false,
+  refreshHomeTrigger: false,
+  refreshMyLibTrigger: false
 }));
 
 
@@ -43,8 +54,33 @@ export function setModalStatus(input: boolean) {
   useLibStore.setState({ modalStatus: input });
 }
 
+export function setNewEntryStatus(input: boolean) {
+  useLibStore.setState({ newEntryStatus: input });
+}
 
+export function setSignInModalStatus(input: boolean) {
+  useLibStore.setState({ signInModalStatus: input });
+}
 
+export function setSignUpModalStatus(input: boolean) {
+  useLibStore.setState({ signUpModalStatus: input });
+}
+
+export function loginAction(name: string | null) {
+  useLibStore.setState({ userName: name, isAuthenticated: true });
+}
+
+export function logoutAction() {
+  useLibStore.setState({ userName: null, isAuthenticated: false });
+}
+
+export function toggleHomeRefresh() {
+  useLibStore.setState(s => ({ refreshHomeTrigger: !s.refreshHomeTrigger }));
+}
+
+export function toggleMyLibRefresh() {
+  useLibStore.setState(s => ({ refreshMyLibTrigger: !s.refreshMyLibTrigger }));
+}
 
 
 export function setTarget(input: LibraryItem) {
@@ -78,11 +114,4 @@ export function resetTarget() {
       personalNote: null,
     },
   });
-}
-
-
-
-
-export function setNewEntryStatus(input: boolean) {
-  useLibStore.setState({ newEntryStatus: input });
 }
