@@ -35,11 +35,11 @@ export default function Modal() {
       const res = await removeLibAction(target.id);
       if (res.success) {
         toast.success(res?.message);
+        toggleHomeRefresh();
+        toggleMyLibRefresh();
       } else {
         toast.error(res?.message);
       }
-      toggleHomeRefresh();
-      toggleMyLibRefresh();
     });
     setModalStatus(false);
     resetTarget();

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Compass, Layers, LogOut, Radar, UserPlus } from 'lucide-react';
+import { Compass, Layers, LogIn, LogOut, Radar } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { clearAuthCredentials, getAuthCredentials } from './authStorage';
@@ -42,7 +42,13 @@ export default function Navbar() {
             Explore
           </Link>
           <Link
-            href="/mylib"
+            href={name ? "/mylib" : "#"}
+            onClick={(e) => {
+              if (!name) {
+                e.preventDefault();
+                setSignInModalStatus(true);
+              }
+            }}
             className={
               path === '/mylib'
                 ? 'flex items-center gap-1 font-medium text-cyan-400'
@@ -72,7 +78,7 @@ export default function Navbar() {
             </div>
           ) : (
             <p onClick={() => setSignInModalStatus(true)} className="flex items-center gap-3 text-slate-400 transition hover:text-cyan-300 cursor-pointer">
-              <UserPlus />Sign Up
+              <LogIn />Sign In
             </p>
           )}
         </div>

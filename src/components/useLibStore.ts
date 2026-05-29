@@ -67,7 +67,7 @@ export function setSignUpModalStatus(input: boolean) {
 }
 
 export function loginAction(name: string | null) {
-  useLibStore.setState({ userName: name, isAuthenticated: true });
+  useLibStore.setState({ userName: name, isAuthenticated: name !== null });
 }
 
 export function logoutAction() {
