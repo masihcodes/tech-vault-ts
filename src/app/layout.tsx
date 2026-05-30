@@ -32,8 +32,8 @@ export default async function RootLayout({ children, }: Readonly<{ children: Rea
         </main>
         <Footer />
 
-        <Toaster position="top-center" richColors={true} theme='dark' offset={50} toastOptions={{
-          classNames: { toast: '!bg-slate-900/90 !border !border-slate-700 !font-extrabold !text-lg', },
+        <Toaster position="top-center" richColors={true} theme='dark' offset={70} toastOptions={{
+          classNames: { toast: '!bg-slate-900/90 !border !border-slate-700 !font-extrabold !text-lg !justify-center !text-center', },
         }} />
 
       </body>

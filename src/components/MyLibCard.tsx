@@ -105,7 +105,7 @@ export default function MyLibCard({ item }: { item: LibraryItem; }) {
           </span>
           <textarea
             onChange={(e) => setNote(e.target.value)}
-            defaultValue={item.personalNote || ''}
+            value={note}
             className='mt-1 h-16 w-full resize-none bg-transparent text-sm text-slate-300 focus:outline-none'
             placeholder='Write your note here...'>
           </textarea>

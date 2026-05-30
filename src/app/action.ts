@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { createLib, getSessionUser, removeLib, toggleBookmark, updateLib } from '../components/neon';
-import { ActionResponse, LibraryItem } from '@/components/myTypes';
+import { ActionResponse, LibraryItem, LibraryItemScheme } from '@/components/myTypes';
+import { z } from 'zod';
 
 
 
@@ -13,19 +14,13 @@ export async function createLibAction(prev: (ActionResponse | null), formData: F
     const user = await getSessionUser();
     if (!user) return { success: false, message: 'Please sign in first' };
 
-    const payload = {
-      name: formData.get('name') as string,
-      category: formData.get('category') as string,
-      description: formData.get('description') as string,
-      installCommand: formData.get('installCommand') as string,
-      docsUrl: formData.get('docsUrl') as string
-    };
+    const payload = Object.fromEntries(formData);
+    const { data, success, error } = LibraryItemScheme.safeParse(payload);
 
-    if (!payload.name || !payload.category || !payload.description || !payload.installCommand || !payload.docsUrl) {
-      return { success: false, message: "All fields are required" };
-    }
+    if (!success) return { success: false, message: z.prettifyError(error) };
 
-    const res = await createLib({ ...payload, isBookmarked: false, personalNote: null });
+
+    const res = await createLib({ ...data, isBookmarked: false, personalNote: null });
     revalidatePath("/");
     revalidatePath("/mylib");
     return { success: true, message: `${res.name} has been successfully created` };
@@ -45,24 +40,13 @@ export async function updateLibAction(target: LibraryItem, prev: (ActionResponse
     const user = await getSessionUser();
     if (!user) return { success: false, message: 'Please sign in first' };
 
-    const payload = {
-      name: formData.get('name') as string,
-      category: formData.get('category') as string,
-      description: formData.get('description') as string,
-      installCommand: formData.get('installCommand') as string,
-      docsUrl: formData.get('docsUrl') as string
-    };
+    const payload = Object.fromEntries(formData);
+    const { data, success, error } = LibraryItemScheme.safeParse(payload);
 
-    if (!payload.name || !payload.category || !payload.description || !payload.installCommand || !payload.docsUrl) {
-      return { success: false, message: "All fields are required" };
-    }
+    if (!success) return { success: false, message: z.prettifyError(error) };
 
-    const res = await updateLib({
-      id: target.id,
-      isBookmarked: target.isBookmarked,
-      personalNote: target.personalNote,
-      ...payload
-    });
+
+    const res = await updateLib({ id: target.id, isBookmarked: target.isBookmarked, personalNote: target.personalNote, ...data });
     revalidatePath("/");
     revalidatePath("/mylib");
     return { success: true, message: `${res.name} has been successfully updated` };

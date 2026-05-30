@@ -1,9 +1,10 @@
 "use server";
 
-import { ActionResponse } from '@/components/myTypes';
+import { ActionResponse, SignupSchema } from '@/components/myTypes';
 import { createUser, findUserByEmail, verifyUser } from '@/components/neon';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
+import { z } from 'zod';
 
 
 
@@ -42,11 +43,12 @@ export async function signInAction(prev: (ActionResponse | null), formData: Form
 
 export async function signUpAction(prev: (ActionResponse | null), formData: FormData) {
   try {
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    const payload = Object.fromEntries(formData);
+    const { data, success, error } = SignupSchema.safeParse(payload);
 
-    if (!name || !email || !password) return { success: false, message: 'Email and password are required' };
+    if (!success) return { success: false, message: z.prettifyError(error) };
+
+    const { name, email, password } = data;
 
     const res = await findUserByEmail(email);
 
