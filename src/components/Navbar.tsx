@@ -1,27 +1,19 @@
-'use client';
+"use client";
 
 import Link from 'next/link';
 import { Compass, Layers, LogIn, LogOut, Radar } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
-import { clearAuthCredentials, getAuthCredentials } from './authStorage';
-import { loginAction, logoutAction, setSignInModalStatus, useLibStore } from './useLibStore';
+import { User } from './myTypes';
+import { signOutAction } from '@/app/auth/action';
+import { setSignInModalStatus } from './useLibStore';
 
-export default function Navbar() {
+
+
+
+export default function Navbar({ user }: { user: (User | null); }) {
+
+
   const path = usePathname();
-
-  const name = useLibStore(s => s.userName);
-
-
-  useEffect(() => {
-    const credentials = getAuthCredentials();
-    loginAction(credentials?.name ?? null);
-  }, []);
-
-  function handleSignOut() {
-    clearAuthCredentials();
-    logoutAction();
-  }
 
   return (
     <nav className="sticky top-0 z-20 border-b border-slate-800 bg-slate-900/50 p-4 backdrop-blur-md">
@@ -42,9 +34,9 @@ export default function Navbar() {
             Explore
           </Link>
           <Link
-            href={name ? "/mylib" : "#"}
+            href={user?.name ? "/mylib" : "#"}
             onClick={(e) => {
-              if (!name) {
+              if (!user?.name) {
                 e.preventDefault();
                 setSignInModalStatus(true);
               }
@@ -59,25 +51,27 @@ export default function Navbar() {
         </div>
 
         <div className="flex flex-1 items-center justify-end mr-5">
-          {name ? (
+          {user?.name ? (
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-4 px-4 py-2 border rounded-full border-slate-700/50 bg-slate-800/40 hover:shadow-lg hover:shadow-cyan-500/40 ">
                 <span className="text-md font-bold bg-linear-to-r from-slate-100 to-cyan-400 bg-clip-text text-transparent tracking-widest ">
-                  {name.toUpperCase()}
+                  {user?.name.toUpperCase()}
                 </span>
                 <span className="h-2 w-2 rounded-full animate-ping bg-green-300"></span>
               </div>
 
 
               <button
-                onClick={handleSignOut}
+                onClick={signOutAction}
                 className="group flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-md font-medium text-slate-400 transition-all hover:bg-rose-500/10 hover:text-rose-400 hover:shadow-lg hover:shadow-rose-500/40 hover:rounded-full">
                 <LogOut className="transition-transform group-hover:-translate-x-0.5" />
                 <span className="hidden sm:inline">Sign Out</span>
               </button>
             </div>
           ) : (
-            <p onClick={() => setSignInModalStatus(true)} className="flex items-center gap-3 text-slate-400 transition hover:text-cyan-300 cursor-pointer">
+            <p
+              onClick={() => setSignInModalStatus(true)}
+              className="flex items-center gap-3 text-slate-400 transition hover:text-cyan-300 cursor-pointer">
               <LogIn />Sign In
             </p>
           )}

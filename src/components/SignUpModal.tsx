@@ -1,54 +1,34 @@
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-
-import { Loader, UserPlus, X } from 'lucide-react';
+import { useActionState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { signUpAction } from '@/app/auth/action';
-import { setAuthCredentials } from '@/components/authStorage';
-import { loginAction, setSignInModalStatus, setSignUpModalStatus, useLibStore } from './useLibStore';
+import { Loader, UserPlus, X } from 'lucide-react';
 
-interface ActionResponse {
-  success: boolean;
-  message: string;
-  user?: { name: string; email: string; };
-}
+import { signUpAction } from '@/app/auth/action';
+import { setSignInModalStatus, setSignUpModalStatus, useLibStore } from './useLibStore';
+import { ActionResponse } from './myTypes';
+
+
+
 
 export default function SignUpModal() {
 
   const signUpModalStatus = useLibStore(s => s.signUpModalStatus);
 
-  const router = useRouter();
-  const pendingCredentials = useRef<{ name: string; email: string; password: string; } | null>(null);
+
   const [state, formAction, pending] = useActionState<ActionResponse | null, FormData>(signUpAction, null,);
 
-  function handleSubmit(formData: FormData) {
-    pendingCredentials.current = {
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-      password: formData.get('password') as string,
-    };
-    formAction(formData);
-  }
 
   useEffect(() => {
-    if (!state) return;
 
-    if (state.success && state.user && pendingCredentials.current) {
-      setAuthCredentials({
-        name: state.user.name,
-        email: pendingCredentials.current.email,
-        password: pendingCredentials.current.password,
-      });
+    if (state && state.success) {
       toast.success(state.message);
-      loginAction(state.user.name);
       setSignUpModalStatus(false);
 
-    } else if (!state.success) {
-      toast.error(state.message);
+    } else if (state && !state.success) {
+      toast.error(state?.message);
     }
-  }, [state, router]);
+  }, [state]);
 
 
 
@@ -70,7 +50,7 @@ export default function SignUpModal() {
                 <h2 className="text-3xl font-extrabold text-white">Sign Up</h2>
                 <p className="mt-2 text-slate-400">Create your DevStack Vault account</p>
               </div>
-              <form action={handleSubmit} className="space-y-5">
+              <form action={formAction} className="space-y-5">
                 <label className="block text-sm font-medium text-slate-400">
                   Full Name
                   <input

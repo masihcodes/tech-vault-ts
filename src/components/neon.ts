@@ -1,21 +1,13 @@
+"use server";
 import { neon } from '@neondatabase/serverless';
-import { AuthCredentials, User } from './authTypes';
-import { LibraryItem } from './useLibStore';
+import { AuthCredentials, LibraryItem, User } from './myTypes';
+import { cookies } from 'next/headers';
+
+
 
 const sql = neon(process.env.DATABASE_URL!);
 
-function mapLibraryRow(lib: Record<string, unknown>): LibraryItem {
-  return {
-    id: lib.id as number,
-    name: lib.name as string,
-    category: lib.category as string,
-    description: lib.description as string,
-    installCommand: lib.installcommand as string,
-    docsUrl: lib.docsurl as string,
-    isBookmarked: Boolean(lib.isbookmarked),
-    personalNote: (lib.personalnote as string | null) ?? null,
-  };
-}
+
 
 export async function verifyUser(credentials: AuthCredentials): Promise<User | null> {
   const users = await sql`
@@ -26,12 +18,9 @@ export async function verifyUser(credentials: AuthCredentials): Promise<User | n
   if (users.length === 0) return null;
 
   const user = users[0];
-  return {
-    id: user.id as number,
-    name: user.name as string,
-    email: user.email as string,
-  };
+  return { id: user.id as number, name: user.name as string, email: user.email as string, };
 }
+
 
 export async function createUser(name: string, email: string, password: string): Promise<User> {
   const result = await sql`
@@ -41,12 +30,9 @@ export async function createUser(name: string, email: string, password: string):
   `;
 
   const user = result[0];
-  return {
-    id: user.id as number,
-    name: user.name as string,
-    email: user.email as string,
-  };
+  return { id: user.id as number, name: user.name as string, email: user.email as string, };
 }
+
 
 export async function findUserByEmail(email: string): Promise<User | null> {
   const users = await sql`
@@ -56,34 +42,47 @@ export async function findUserByEmail(email: string): Promise<User | null> {
   if (users.length === 0) return null;
 
   const user = users[0];
-  return {
-    id: user.id as number,
-    name: user.name as string,
-    email: user.email as string,
-  };
+  return { id: user.id as number, name: user.name as string, email: user.email as string, };
 }
 
-export async function getLibs(
-  query: string = '',
-  sort: string = '',
-  credentials?: AuthCredentials | null,
-): Promise<LibraryItem[]> {
-  const searchPattern = `%${query}%`;
-  let userId: number | null = null;
 
-  if (credentials?.email && credentials?.password) {
-    const user = await verifyUser(credentials);
-    if (user) userId = user.id;
+export async function getSessionUser(): Promise<User | null> {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get('auth-token')?.value;
+
+  if (!userId) return null;
+
+  try {
+    const users = await sql`SELECT id, name, email FROM users WHERE id = ${userId}`;
+    if (users.length === 0) return null;
+    return { id: users[0].id as number, name: users[0].name as string, email: users[0].email as string };
+  } catch {
+    return null;
   }
+}
+
+
+
+
+
+
+
+
+
+export async function getLibs(query: string = "", sort: string = ""): Promise<LibraryItem[]> {
+
+  const searchPattern = `%${query}%`;
+
+  const user = await getSessionUser();
 
   let libraries;
 
-  if (userId !== null) {
+  if (user) {
     if (sort === 'des') {
       libraries = await sql`
         SELECT l.*, (b.id IS NOT NULL) AS isbookmarked, b.personalnote
         FROM libraries l
-        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${userId}
+        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${user?.id}
         WHERE l.name ILIKE ${searchPattern} OR l.description ILIKE ${searchPattern}
         ORDER BY l.id DESC
       `;
@@ -91,7 +90,7 @@ export async function getLibs(
       libraries = await sql`
         SELECT l.*, (b.id IS NOT NULL) AS isbookmarked, b.personalnote
         FROM libraries l
-        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${userId}
+        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${user?.id}
         WHERE l.name ILIKE ${searchPattern} OR l.description ILIKE ${searchPattern}
         ORDER BY LOWER(l.name) ASC
       `;
@@ -99,25 +98,11 @@ export async function getLibs(
       libraries = await sql`
         SELECT l.*, (b.id IS NOT NULL) AS isbookmarked, b.personalnote
         FROM libraries l
-        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${userId}
+        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${user?.id}
         WHERE l.name ILIKE ${searchPattern} OR l.description ILIKE ${searchPattern}
         ORDER BY l.id ASC
       `;
     }
-  } else if (sort === 'des') {
-    libraries = await sql`
-      SELECT *, false AS isbookmarked, NULL AS personalnote
-      FROM libraries
-      WHERE name ILIKE ${searchPattern} OR description ILIKE ${searchPattern}
-      ORDER BY id DESC
-    `;
-  } else if (sort === 'name') {
-    libraries = await sql`
-      SELECT *, false AS isbookmarked, NULL AS personalnote
-      FROM libraries
-      WHERE name ILIKE ${searchPattern} OR description ILIKE ${searchPattern}
-      ORDER BY LOWER(name) ASC
-    `;
   } else {
     libraries = await sql`
       SELECT *, false AS isbookmarked, NULL AS personalnote
@@ -127,30 +112,91 @@ export async function getLibs(
     `;
   }
 
-  return libraries.map(mapLibraryRow);
+
+  return libraries.map(lib => ({
+    id: lib.id,
+    name: lib.name,
+    category: lib.category,
+    description: lib.description,
+    installCommand: lib.installcommand,
+    docsUrl: lib.docsurl,
+    isBookmarked: lib.isbookmarked,
+    personalNote: lib.personalnote
+  }));
 }
 
-export async function getBookmarkedLibs(credentials: AuthCredentials): Promise<LibraryItem[]> {
-  const user = await verifyUser(credentials);
-  if (!user) return [];
 
-  const libraries = await sql`
-    SELECT l.*, true AS isbookmarked, b.personalnote
-    FROM libraries l
-    INNER JOIN bookmarks b ON b.library_id = l.id
-    WHERE b.user_id = ${user.id}
-    ORDER BY l.name ASC
+export async function createLib(data: Omit<LibraryItem, 'id'>): Promise<LibraryItem> {
+  const newLib = await sql`
+    INSERT INTO libraries (name, category, description, installCommand, docsUrl)
+    VALUES (${data.name}, ${data.category}, ${data.description}, ${data.installCommand}, ${data.docsUrl})
+    RETURNING *;
   `;
 
-  return libraries.map(mapLibraryRow);
+  const lib = newLib[0];
+  return {
+    id: lib.id,
+    name: lib.name,
+    category: lib.category,
+    description: lib.description,
+    installCommand: lib.installcommand,
+    docsUrl: lib.docsurl,
+    isBookmarked: false,
+    personalNote: null
+  };;
 }
 
-export async function toggleBookmark(
-  libraryId: string | number,
-  credentials: AuthCredentials,
-): Promise<boolean> {
-  const user = await verifyUser(credentials);
-  if (!user) throw new Error('Invalid email or password');
+
+export async function updateLib(data: LibraryItem): Promise<LibraryItem> {
+
+  const updatedLib = await sql`
+    UPDATE libraries
+    SET 
+      name = ${data.name},
+      category = ${data.category},
+      description = ${data.description},
+      installCommand = ${data.installCommand},
+      docsUrl = ${data.docsUrl}
+    WHERE id = ${data.id}
+    RETURNING *;
+  `;
+
+  const lib = updatedLib[0];
+  return {
+    id: lib.id,
+    name: lib.name,
+    category: lib.category,
+    description: lib.description,
+    installCommand: lib.installcommand,
+    docsUrl: lib.docsurl,
+    isBookmarked: false,
+    personalNote: null
+  };
+}
+
+
+export async function removeLib(id: string | number) {
+  const deletedLib = await sql`
+    DELETE FROM libraries
+    WHERE id = ${id}
+    RETURNING *;
+  `;
+
+  const lib = deletedLib[0];
+  return {
+    id: lib.id,
+    name: lib.name,
+    category: lib.category,
+    description: lib.description,
+    installCommand: lib.installcommand,
+    docsUrl: lib.docsurl,
+    isBookmarked: lib.isbookmarked,
+    personalNote: lib.personalnote
+  };
+}
+
+
+export async function toggleBookmark(libraryId: string | number, user: User): Promise<boolean> {
 
   const existing = await sql`
     SELECT id FROM bookmarks
@@ -172,27 +218,16 @@ export async function toggleBookmark(
   return true;
 }
 
-export async function removeBookmark(
-  libraryId: string | number,
-  credentials: AuthCredentials,
-): Promise<void> {
-  const user = await verifyUser(credentials);
-  if (!user) throw new Error('Invalid email or password');
 
+export async function removeFromMyLib(libraryId: string | number, user: User): Promise<void> {
   await sql`
     DELETE FROM bookmarks
     WHERE user_id = ${user.id} AND library_id = ${libraryId}
   `;
 }
 
-export async function updateBookmarkNote(
-  libraryId: string | number,
-  personalNote: string | null,
-  credentials: AuthCredentials,
-): Promise<void> {
-  const user = await verifyUser(credentials);
-  if (!user) throw new Error('Invalid email or password');
 
+export async function updatePersonalNote(libraryId: string | number, personalNote: string | null, user: User): Promise<void> {
   await sql`
     UPDATE bookmarks
     SET personalnote = ${personalNote}
@@ -200,42 +235,26 @@ export async function updateBookmarkNote(
   `;
 }
 
-export async function createLib(data: Omit<LibraryItem, 'id'>): Promise<LibraryItem> {
-  const newLib = await sql`
-    INSERT INTO libraries (name, category, description, installcommand, docsurl)
-    VALUES (${data.name}, ${data.category}, ${data.description}, ${data.installCommand}, ${data.docsUrl})
-    RETURNING *
+
+export async function getBookmarkedLibs(id: string | number): Promise<LibraryItem[]> {
+
+
+  const libraries = await sql`
+    SELECT l.*, true AS isbookmarked, b.personalnote
+    FROM libraries l
+    INNER JOIN bookmarks b ON b.library_id = l.id
+    WHERE b.user_id = ${id}
+    ORDER BY l.name ASC
   `;
 
-  return mapLibraryRow({ ...newLib[0], isbookmarked: false, personalnote: null });
-}
-
-export async function updateLib(data: LibraryItem): Promise<LibraryItem> {
-  const updatedLib = await sql`
-    UPDATE libraries
-    SET
-      name = ${data.name},
-      category = ${data.category},
-      description = ${data.description},
-      installcommand = ${data.installCommand},
-      docsurl = ${data.docsUrl}
-    WHERE id = ${data.id}
-    RETURNING *
-  `;
-
-  return mapLibraryRow({
-    ...updatedLib[0],
-    isbookmarked: data.isBookmarked,
-    personalnote: data.personalNote,
-  });
-}
-
-export async function removeLib(id: string | number) {
-  const deletedLib = await sql`
-    DELETE FROM libraries
-    WHERE id = ${id}
-    RETURNING *
-  `;
-
-  return mapLibraryRow({ ...deletedLib[0], isbookmarked: false, personalnote: null });
+  return libraries.map(lib => ({
+    id: lib.id,
+    name: lib.name,
+    category: lib.category,
+    description: lib.description,
+    installCommand: lib.installcommand,
+    docsUrl: lib.docsurl,
+    isBookmarked: lib.isbookmarked,
+    personalNote: lib.personalnote
+  }));
 }

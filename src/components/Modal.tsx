@@ -2,41 +2,43 @@
 
 import { useActionState, useEffect, useTransition } from 'react';
 import { LibraryBig, Link, Loader, PackageX, Save, Terminal, X } from 'lucide-react';
-import { resetTarget, setModalStatus, toggleHomeRefresh, toggleMyLibRefresh, useLibStore } from './useLibStore';
+import { resetTarget, setModalStatus, useLibStore } from './useLibStore';
 import { createLibAction, removeLibAction, updateLibAction } from '../app/action';
-import { getAuthCredentials } from './authStorage';
 import { toast } from 'sonner';
+import { ActionResponse } from './myTypes';
 
 
-interface ActionResponse {
-  success: boolean;
-  message: string;
-}
+
 
 export default function Modal() {
+
+
   const modalStatus = useLibStore((s) => s.modalStatus);
   const target = useLibStore((s) => s.target);
   const newEntryStatus = useLibStore((s) => s.newEntryStatus);
 
-  const credentials = getAuthCredentials();
-  const [state, formAction, pending] = useActionState<ActionResponse | null, FormData>(
-    newEntryStatus && credentials
-      ? createLibAction.bind(null, credentials)
-      : updateLibAction.bind(null, target),
-    null,
-  );
+
+
+  const formActionWrapper = async (prevState: ActionResponse | null, formData: FormData) => {
+    if (newEntryStatus) {
+      return createLibAction(prevState, formData);
+    } else {
+      return updateLibAction(target, prevState, formData);
+    }
+  };
+
+  const [state, formAction, pending] = useActionState<ActionResponse | null, FormData>(formActionWrapper, null);
+
+
+
 
   const [delPending, startTransition] = useTransition();
-
-
 
   function handleDelete() {
     startTransition(async () => {
       const res = await removeLibAction(target.id);
       if (res.success) {
         toast.success(res?.message);
-        toggleHomeRefresh();
-        toggleMyLibRefresh();
       } else {
         toast.error(res?.message);
       }
@@ -52,9 +54,8 @@ export default function Modal() {
       setModalStatus(false);
       resetTarget();
       toast.success(state.message);
-      toggleHomeRefresh();
-      toggleMyLibRefresh();
-    } else if (state && !state.success) {
+    }
+    if (state && !state.success) {
       toast.error(state.message);
     }
   }, [state]);

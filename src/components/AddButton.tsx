@@ -1,26 +1,33 @@
-'use client';
+"use client";
 
 import { PackagePlus } from 'lucide-react';
+import { setModalStatus, setNewEntryStatus, setSignInModalStatus } from './useLibStore';
+import { User } from './myTypes';
 
-import { setModalStatus, setNewEntryStatus, useLibStore } from './useLibStore';
 
-export default function AddButton() {
 
-  const authenticated = useLibStore(s => s.isAuthenticated);
 
-  if (!authenticated) return null;
+export default function AddButton({ user }: { user: (User | null); }) {
+
+
+
+  function handleAdd() {
+    if (!user) {
+      setSignInModalStatus(true);
+    } else {
+      setModalStatus(true);
+      setNewEntryStatus(true);
+    }
+  }
 
   return (
-    <div className="w-full sm:w-auto">
-      <button
-        onClick={() => {
-          setModalStatus(true);
-          setNewEntryStatus(true);
-        }}
-        className="flex cursor-pointer rounded-xl bg-cyan-600 px-8 py-4 text-white shadow-lg shadow-cyan-500/40 transition duration-300 ease-in hover:bg-cyan-500">
-        <PackagePlus />
-        Add New Library
+    <div className='w-full sm:w-auto'>
+      <button onClick={handleAdd}
+        className='flex bg-cyan-600 text-white px-8 py-4 rounded-xl hover:bg-cyan-500 transition duration-300 ease-in shadow-lg shadow-cyan-500/40 cursor-pointer'>
+        <PackagePlus />Add New Library
       </button>
     </div>
   );
 }
+
+

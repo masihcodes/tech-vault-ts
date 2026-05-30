@@ -1,49 +1,41 @@
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader, LogIn, X } from 'lucide-react';
+import { useActionState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { signInAction } from '@/app/auth/action';
-import { setAuthCredentials } from '@/components/authStorage';
-import { loginAction, setSignInModalStatus, setSignUpModalStatus, useLibStore } from './useLibStore';
+import { Loader, LogIn, X } from 'lucide-react';
 
-interface ActionResponse {
-  success: boolean;
-  message: string;
-  user?: { name: string; email: string; };
-}
+import { signInAction } from '@/app/auth/action';
+import { setSignInModalStatus, setSignUpModalStatus, useLibStore } from './useLibStore';
+import { ActionResponse } from './myTypes';
+
+
+
+
+
+
 
 export default function SignInModal() {
 
   const signInModalStatus = useLibStore(s => s.signInModalStatus);
 
-  const router = useRouter();
-  const pendingCredentials = useRef<{ email: string; password: string; } | null>(null);
+
   const [state, formAction, pending] = useActionState<ActionResponse | null, FormData>(signInAction, null,);
 
-  function handleSubmit(formData: FormData) {
-    pendingCredentials.current = { email: formData.get('email') as string, password: formData.get('password') as string, };
-    formAction(formData);
-  }
+
 
   useEffect(() => {
-    if (!state) return;
 
-    if (state.success && state.user && pendingCredentials.current) {
-      setAuthCredentials({
-        name: state.user.name,
-        email: pendingCredentials.current.email,
-        password: pendingCredentials.current.password,
-      });
+    if (state && state.success) {
       toast.success(state.message);
-      loginAction(state.user.name);
       setSignInModalStatus(false);
 
-    } else if (!state.success) {
-      toast.error(state.message);
+    } else if (state && !state.success) {
+      toast.error(state?.message);
     }
-  }, [state, router]);
+  }, [state]);
+
+
+
 
   return (
     <>
@@ -63,7 +55,7 @@ export default function SignInModal() {
                 <h2 className="text-3xl font-extrabold text-white">Sign In</h2>
                 <p className="mt-2 text-slate-400">Welcome back to DevStack Vault</p>
               </div>
-              <form action={handleSubmit} className="space-y-5">
+              <form action={formAction} className="space-y-5">
                 <label className="block text-sm font-medium text-slate-400">
                   Email
                   <input

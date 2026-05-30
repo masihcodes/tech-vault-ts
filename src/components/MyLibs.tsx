@@ -4,14 +4,11 @@ import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 import MyLibCard from './MyLibCard';
-import { LibraryItem } from './useLibStore';
+import { LibraryItems } from './myTypes';
 
 
-interface Libraries {
-  myLibs: LibraryItem[];
-}
 
-export default function MyLibs({ myLibs }: Libraries) {
+export default function MyLibs({ myLibs }: LibraryItems) {
 
 
 
