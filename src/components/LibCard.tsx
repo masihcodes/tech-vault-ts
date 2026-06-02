@@ -2,8 +2,8 @@
 
 
 import { useTransition } from 'react';
-import { Bookmark, BookmarkPlus, Box, Loader, SquareArrowOutUpRight } from 'lucide-react';
-import { setModalStatus, setNewEntryStatus, setSignInModalStatus, setTarget } from './useLibStore';
+import { Bookmark, BookmarkPlus, Box, Loader, ShieldCheck, SquareArrowOutUpRight } from 'lucide-react';
+import { setBadgeModalStatus, setLibInfo, setModalStatus, setNewEntryStatus, setSignInModalStatus, setTarget } from './useLibStore';
 import { isBookmarkedAction } from '@/app/action';
 import { toast } from 'sonner';
 import { LibraryItem, User } from './myTypes';
@@ -49,13 +49,35 @@ export default function LibCard({ lib, user }: { lib: LibraryItem; user: (User |
 
 
 
+  const statusStyles = {
+    pending: "text-amber-400 border-amber-500/40 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
+    private: "text-slate-400 border-slate-600 bg-slate-800/80 hover:bg-slate-700",
+    public: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]",
+  };
+  const currentStyle = statusStyles[lib.status];
+
 
   return (
     <div className="group flex flex-col rounded-2xl border border-slate-700/50 bg-slate-800/30 p-6 transition-all duration-500 hover:scale-105 hover:border-cyan-500/90 hover:bg-slate-800 hover:shadow-lg hover:shadow-cyan-500/40">
       <div className="mb-4 flex flex-col gap-2">
-        <span className="self-end rounded-full border border-slate-500 bg-slate-700/50 px-2 py-1 text-[0.55rem] text-slate-300">
-          {lib.category}
-        </span>
+        <div className="flex justify-between">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-[0.65rem] font-semibold tracking-wide text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.15)] transition-all hover:bg-cyan-500/20">
+            {lib.category}
+          </span>
+          <span
+            onClick={() => {
+              if (user?.role === "admin") {
+                setBadgeModalStatus(true);
+                setLibInfo(lib);
+              } else {
+                toast.error("Only admin can change badge status.");
+              }
+            }}
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.65rem] font-semibold tracking-wide uppercase transition-all ${currentStyle}`}>
+            {lib.status}
+            {lib.isProtected ? <ShieldCheck className="h-4 w-4" /> : ""}
+          </span>
+        </div>
         <div className="flex items-center gap-2 text-white transition-colors group-hover:text-cyan-400">
           <Box className="h-5 w-5" />
           <h3 className="text-xl font-extrabold">{lib.name}</h3>

@@ -6,6 +6,7 @@ import { HomePageProps } from '@/components/myTypes';
 import LibList from '@/components/LibList';
 import SignInModal from '@/components/SignInModal';
 import SignUpModal from '@/components/SignUpModal';
+import BadgeModal from '@/components/BadgeModal';
 
 
 
@@ -17,9 +18,9 @@ export default async function Home({ searchParams }: HomePageProps) {
   const query = (params?.q as string) || '';
   const sort = (params?.sort as string) || '';
 
-  const libPromise = getLibs(query, sort);
-
   const user = await getSessionUser();
+  const libPromise = getLibs(query, sort, user);
+
 
 
   return (
@@ -47,6 +48,7 @@ export default async function Home({ searchParams }: HomePageProps) {
       <Modal />
       <SignInModal />
       <SignUpModal />
+      <BadgeModal />
 
     </>
   );

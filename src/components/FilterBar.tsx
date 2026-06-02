@@ -10,6 +10,8 @@ export default function FilterBar() {
   const path = usePathname();
   const urlParams = useSearchParams();
 
+
+
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSearch = (text: string) => {
     if (debounceTimer.current) {
@@ -20,6 +22,10 @@ export default function FilterBar() {
     }, 500);
   };
 
+
+
+
+
   const currentSort = urlParams.get("sort") || "asc";
 
   function handleSort(text: string) {
@@ -28,6 +34,10 @@ export default function FilterBar() {
     params.set("sort", text);
     router.replace(`${path}?${params.toString()}`);
   }
+
+
+
+
 
 
   return (

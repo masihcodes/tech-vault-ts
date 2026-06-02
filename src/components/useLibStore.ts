@@ -13,11 +13,29 @@ export const useLibStore = create<LibStoreState<LibraryItem>>()(() => ({
     docsUrl: '',
     isBookmarked: false,
     personalNote: null,
+    createdBy: null,
+    isProtected: false,
+    status: 'pending'
   },
 
   newEntryStatus: true,
   signInModalStatus: false,
-  signUpModalStatus: false
+  signUpModalStatus: false,
+  badgeModalStatus: false,
+
+  libInfo: {
+    id: '',
+    name: '',
+    category: '',
+    description: '',
+    installCommand: '',
+    docsUrl: '',
+    isBookmarked: false,
+    personalNote: null,
+    createdBy: null,
+    isProtected: false,
+    status: 'pending'
+  },
 }));
 
 
@@ -39,6 +57,10 @@ export function setSignUpModalStatus(input: boolean) {
   useLibStore.setState({ signUpModalStatus: input });
 }
 
+export function setBadgeModalStatus(input: boolean) {
+  useLibStore.setState({ badgeModalStatus: input });
+}
+
 
 
 
@@ -53,6 +75,9 @@ export function setTarget(input: LibraryItem) {
       docsUrl: input.docsUrl,
       isBookmarked: input.isBookmarked,
       personalNote: input.personalNote,
+      createdBy: input.createdBy,
+      isProtected: input.isProtected,
+      status: input.status
     },
   });
 }
@@ -68,6 +93,46 @@ export function resetTarget() {
       docsUrl: '',
       isBookmarked: false,
       personalNote: null,
+      createdBy: null,
+      isProtected: false,
+      status: 'pending'
+    },
+  });
+}
+
+
+export function setLibInfo(input: LibraryItem) {
+  useLibStore.setState({
+    libInfo: {
+      id: input.id,
+      name: input.name,
+      category: input.category,
+      description: input.description,
+      installCommand: input.installCommand,
+      docsUrl: input.docsUrl,
+      isBookmarked: input.isBookmarked,
+      personalNote: input.personalNote,
+      createdBy: input.createdBy,
+      isProtected: input.isProtected,
+      status: input.status
+    },
+  });
+}
+
+export function resetLibInfo() {
+  useLibStore.setState({
+    libInfo: {
+      id: '',
+      name: '',
+      category: '',
+      description: '',
+      installCommand: '',
+      docsUrl: '',
+      isBookmarked: false,
+      personalNote: null,
+      createdBy: null,
+      isProtected: false,
+      status: 'pending'
     },
   });
 }
