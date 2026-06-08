@@ -2,45 +2,59 @@
 import { neon } from '@neondatabase/serverless';
 import { AuthCredentials, LibraryItem, User } from './myTypes';
 import { cookies } from 'next/headers';
-
+import { drizzle } from 'drizzle-orm/neon-http';
+import { bookmarks, libraries, users } from '@/db/schema';
+import { and, asc, desc, eq, getTableColumns, ilike, or } from 'drizzle-orm';
 
 
 
 const sql = neon(process.env.DATABASE_URL!);
-
+const db = drizzle(sql);
 
 
 export async function verifyUser(credentials: AuthCredentials): Promise<User | null> {
-  const users = await sql`
-    SELECT id, name, email,role FROM users
-    WHERE email = ${credentials.email} AND password = ${credentials.password}`;
+  const [res] = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role
+    })
+    .from(users)
+    .where(and(eq(users.email, credentials.email), eq(users.password, credentials.password)))
+    .limit(1);
 
-  if (users.length === 0) return null;
-
-  const user = users[0];
-  return { id: user.id as number, name: user.name as string, email: user.email as string, role: user.role as "admin" | "user" };
+  if (!res) return null;
+  return res;
 }
 
 
 export async function createUser(name: string, email: string, password: string): Promise<User> {
-  const result = await sql`
-    INSERT INTO users (name, email, password)
-    VALUES (${name}, ${email}, ${password})
-    RETURNING id, name, email, role`;
-
-  const user = result[0];
-  return { id: user.id as number, name: user.name as string, email: user.email as string, role: "user" };
+  const [res] = await db
+    .insert(users)
+    .values({
+      name: name,
+      email: email,
+      password: password,
+    })
+    .returning({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role
+    });
+  return res;
 }
 
 
 export async function findUserByEmail(email: string): Promise<User | null> {
-  const users = await sql`
-    SELECT id, name, email, role FROM users WHERE email = ${email}`;
-
-  if (users.length === 0) return null;
-
-  const user = users[0];
-  return { id: user.id as number, name: user.name as string, email: user.email as string, role: user.role as "admin" | "user" };
+  const [res] = await db
+    .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  if (!res) return null;
+  return res;
 }
 
 
@@ -50,31 +64,24 @@ export async function getSessionUser(): Promise<User | null> {
 
   if (!userId) return null;
 
-  const users = await sql`SELECT id, name, email, role FROM users WHERE id = ${userId}`;
-  if (users.length === 0) return null;
-  const user = users[0];
-  return { id: user.id as number, name: user.name as string, email: user.email as string, role: user.role as "admin" | "user" };
-
+  const [res] = await db
+    .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+    .from(users)
+    .where(eq(users.id, Number(userId)))
+    .limit(1);
+  if (!res) return null;
+  return res;
 }
 
 
 export async function getLibById(id: string | number): Promise<LibraryItem | null> {
-  const lib = await sql`SELECT * FROM libraries WHERE id = ${id}`;
-  if (lib.length === 0) return null;
-  return {
-    id: lib[0].id,
-    name: lib[0].name,
-    category: lib[0].category,
-    description: lib[0].description,
-    installCommand: lib[0].installcommand,
-    docsUrl: lib[0].docsurl,
-    isBookmarked: false,
-    personalNote: null,
-    createdBy: lib[0].created_by,
-    isProtected: lib[0].is_protected,
-    status: lib[0].status
-  };
-
+  const [res] = await db
+    .select()
+    .from(libraries)
+    .where(eq(libraries.id, Number(id)))
+    .limit(1);
+  if (!res) return null;
+  return { ...res, isBookmarked: false, personalNote: null };
 }
 
 
@@ -83,240 +90,161 @@ export async function getLibById(id: string | number): Promise<LibraryItem | nul
 export async function getLibs(query: string = "", sort: string = "", user: User | null): Promise<LibraryItem[]> {
 
   const searchPattern = `%${query}%`;
-  let libraries;
 
-  if (user === null) {
-    switch (sort) {
-      case 'des':
-        libraries = await sql`
-        SELECT *, false AS isbookmarked, NULL AS personalnote FROM libraries
-        WHERE (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern}) AND status = 'public'
-        ORDER BY id DESC`;
-        break;
-      case 'name':
-        libraries = await sql`
-        SELECT *, false AS isbookmarked, NULL AS personalnote FROM libraries
-        WHERE (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern}) AND status = 'public'
-        ORDER BY LOWER(name) ASC`;
-        break;
-      default:
-        libraries = await sql`
-        SELECT *, false AS isbookmarked, NULL AS personalnote FROM libraries
-        WHERE (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern}) AND status = 'public'
-        ORDER BY id ASC`;
-        break;
-    }
+  if (!user) {
+    const res = await db
+      .select()
+      .from(libraries)
+      .where(
+        and(
+          eq(libraries.status, 'public'),
+          or(
+            ilike(libraries.name, searchPattern),
+            ilike(libraries.description, searchPattern)
+          )
+        )
+      )
+      .orderBy(
+        sort === 'des' ? desc(libraries.id) :
+          sort === 'name' ? asc(libraries.name) :
+            asc(libraries.id)
+      );
+    return res.map(item => ({ ...item, isBookmarked: false, personalNote: null }));
+
   } else if (user.role === "user") {
-    switch (sort) {
-      case 'des':
-        libraries = await sql`
-        SELECT l.*, (b.id IS NOT NULL) AS isbookmarked, b.personalnote
-        FROM libraries l
-        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${user?.id} 
-        WHERE (l.name ILIKE ${searchPattern} OR l.description ILIKE ${searchPattern}) AND (l.status = 'public' OR l.created_by = ${user.id})
-        ORDER BY l.id DESC`;
-        break;
-      case 'name':
-        libraries = await sql`
-        SELECT l.*, (b.id IS NOT NULL) AS isbookmarked, b.personalnote
-        FROM libraries l
-        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${user?.id} 
-        WHERE (l.name ILIKE ${searchPattern} OR l.description ILIKE ${searchPattern}) AND (l.status = 'public' OR l.created_by = ${user.id})
-        ORDER BY LOWER(l.name) ASC`;
-        break;
-      default:
-        libraries = await sql`
-        SELECT l.*, (b.id IS NOT NULL) AS isbookmarked, b.personalnote
-        FROM libraries l
-        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${user?.id} 
-        WHERE (l.name ILIKE ${searchPattern} OR l.description ILIKE ${searchPattern}) AND (l.status = 'public' OR l.created_by = ${user.id})
-        ORDER BY l.id ASC`;
-        break;
-    }
+    const res = await db
+      .select({ ...getTableColumns(libraries), bookmarkId: bookmarks.id, personalNote: bookmarks.personalNote })
+      .from(libraries)
+      .leftJoin(bookmarks, and(eq(libraries.id, bookmarks.libraryId), eq(bookmarks.userId, user.id)))
+      .where(
+        and(
+          or(
+            eq(libraries.status, 'public'),
+            eq(libraries.createdBy, user.id)
+          )
+          ,
+          or(
+            ilike(libraries.name, searchPattern),
+            ilike(libraries.description, searchPattern)
+          )
+        )
+      )
+      .orderBy(
+        sort === 'des' ? desc(libraries.id) :
+          sort === 'name' ? asc(libraries.name) :
+            asc(libraries.id)
+      );
+
+    return res.map(item => ({
+      ...item,
+      isBookmarked: item.bookmarkId !== null
+    }));
+
   } else if (user.role === "admin") {
-    switch (sort) {
-      case 'des':
-        libraries = await sql`
-        SELECT l.*, (b.id IS NOT NULL) AS isbookmarked, b.personalnote
-        FROM libraries l
-        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${user?.id}
-        WHERE l.name ILIKE ${searchPattern} OR l.description ILIKE ${searchPattern}
-        ORDER BY l.id DESC`;
-        break;
-      case 'name':
-        libraries = await sql`
-        SELECT l.*, (b.id IS NOT NULL) AS isbookmarked, b.personalnote
-        FROM libraries l
-        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${user?.id}
-        WHERE l.name ILIKE ${searchPattern} OR l.description ILIKE ${searchPattern}
-        ORDER BY LOWER(l.name) ASC`;
-        break;
-      default:
-        libraries = await sql`
-        SELECT l.*, (b.id IS NOT NULL) AS isbookmarked, b.personalnote
-        FROM libraries l
-        LEFT JOIN bookmarks b ON b.library_id = l.id AND b.user_id = ${user?.id}
-        WHERE l.name ILIKE ${searchPattern} OR l.description ILIKE ${searchPattern}
-        ORDER BY l.id ASC`;
-        break;
-    }
+    const res = await db
+      .select({ ...getTableColumns(libraries), bookmarkId: bookmarks.id, personalNote: bookmarks.personalNote })
+      .from(libraries)
+      .leftJoin(bookmarks, and(eq(libraries.id, bookmarks.libraryId), eq(bookmarks.userId, user.id)))
+      .where(
+        or(
+          ilike(libraries.name, searchPattern),
+          ilike(libraries.description, searchPattern)
+        )
+      )
+      .orderBy(
+        sort === 'des' ? desc(libraries.id) :
+          sort === 'name' ? asc(libraries.name) :
+            asc(libraries.id)
+      );
+
+    return res.map(item => ({
+      ...item,
+      isBookmarked: item.bookmarkId !== null
+    }));
   } else {
-    libraries = await sql`
-      SELECT * FROM libraries 
-      WHERE name ILIKE ${searchPattern} OR description ILIKE ${searchPattern}
-      ORDER BY id ASC
-    `;
+    throw new Error("Invalid user role");
   }
-
-
-  return libraries.map(lib => ({
-    id: lib.id,
-    name: lib.name,
-    category: lib.category,
-    description: lib.description,
-    installCommand: lib.installcommand,
-    docsUrl: lib.docsurl,
-    isBookmarked: lib.isbookmarked,
-    personalNote: lib.personalnote,
-    createdBy: lib.created_by,
-    isProtected: lib.is_protected,
-    status: lib.status
-  }));
 }
 
 
-export async function createLib(data: Omit<LibraryItem, 'id'>): Promise<LibraryItem> {
-  const newLib = await sql`
-    INSERT INTO libraries (name, category, description, installCommand, docsUrl, created_by, is_protected, status)
-    VALUES (${data.name}, ${data.category}, ${data.description}, ${data.installCommand}, ${data.docsUrl}, ${data.createdBy}, ${data.isProtected}, ${data.status})
-    RETURNING *;`;
-
-  const lib = newLib[0];
-  return {
-    id: lib.id,
-    name: lib.name,
-    category: lib.category,
-    description: lib.description,
-    installCommand: lib.installcommand,
-    docsUrl: lib.docsurl,
-    isBookmarked: false,
-    personalNote: null,
-    createdBy: lib.created_by,
-    isProtected: lib.is_protected,
-    status: lib.status
-  };;
+export async function createLib(data: Omit<LibraryItem, 'id' | 'isBookmarked' | 'personalNote'>): Promise<LibraryItem> {
+  const [res] = await db.insert(libraries).values(data).returning();
+  return { ...res, isBookmarked: false, personalNote: null };
 }
 
 
-export async function updateLib(data: LibraryItem): Promise<LibraryItem> {
-
-  const updatedLib = await sql`
-    UPDATE libraries
-    SET 
-      name = ${data.name},
-      category = ${data.category},
-      description = ${data.description},
-      installCommand = ${data.installCommand},
-      docsUrl = ${data.docsUrl},
-      created_by = ${data.createdBy},
-      is_protected = ${data.isProtected},
-      status = ${data.status}
-    WHERE id = ${data.id}
-    RETURNING *;`;
-
-  const lib = updatedLib[0];
-  return {
-    id: lib.id,
-    name: lib.name,
-    category: lib.category,
-    description: lib.description,
-    installCommand: lib.installcommand,
-    docsUrl: lib.docsurl,
-    isBookmarked: false,
-    personalNote: null,
-    createdBy: lib.created_by,
-    isProtected: lib.is_protected,
-    status: lib.status
-  };
+export async function updateLib(data: Omit<LibraryItem, 'isBookmarked' | 'personalNote'>): Promise<LibraryItem> {
+  const [res] = await db.update(libraries)
+    .set({
+      name: data.name,
+      category: data.category,
+      description: data.description,
+      installCommand: data.installCommand,
+      docsUrl: data.docsUrl,
+      createdBy: data.createdBy!,
+      isProtected: data.isProtected,
+      status: data.status,
+    })
+    .where(eq(libraries.id, Number(data.id)))
+    .returning();
+  return { ...res, isBookmarked: false, personalNote: null };
 }
 
 
-export async function removeLib(id: string | number) {
-  const deletedLib = await sql`
-    DELETE FROM libraries WHERE id = ${id} RETURNING *;`;
-
-  const lib = deletedLib[0];
-  return {
-    id: lib.id,
-    name: lib.name,
-    category: lib.category,
-    description: lib.description,
-    installCommand: lib.installcommand,
-    docsUrl: lib.docsurl,
-    isBookmarked: lib.isbookmarked,
-    personalNote: lib.personalnote, createdBy: lib.created_by,
-    isProtected: lib.is_protected,
-    status: lib.status
-  };
+export async function removeLib(id: string | number): Promise<LibraryItem> {
+  const [res] = await db.delete(libraries).where(eq(libraries.id, Number(id))).returning();
+  return { ...res, isBookmarked: false, personalNote: null };
 }
 
 
 export async function toggleBookmark(libraryId: string | number, user: User): Promise<boolean> {
+  const [existing] = await db
+    .select()
+    .from(bookmarks)
+    .where(and(eq(bookmarks.libraryId, Number(libraryId)), eq(bookmarks.userId, user.id)))
+    .limit(1);
 
-  const existing = await sql`
-    SELECT id FROM bookmarks WHERE user_id = ${user.id} AND library_id = ${libraryId}`;
-
-  if (existing.length > 0) {
-    await sql`
-      DELETE FROM bookmarks WHERE user_id = ${user.id} AND library_id = ${libraryId}`;
+  if (!existing) {
+    await db.insert(bookmarks).values({ userId: user.id, libraryId: Number(libraryId) });
+    return true;
+  } else {
+    await db.delete(bookmarks).where(and(eq(bookmarks.libraryId, Number(libraryId)), eq(bookmarks.userId, user.id)));
     return false;
   }
-
-  await sql`
-    INSERT INTO bookmarks (user_id, library_id) VALUES (${user.id}, ${libraryId})`;
-  return true;
 }
 
 
 export async function removeFromMyLib(libraryId: string | number, user: User): Promise<void> {
-  await sql`
-    DELETE FROM bookmarks WHERE user_id = ${user.id} AND library_id = ${libraryId}`;
+  await db.delete(bookmarks).where(and(eq(bookmarks.libraryId, Number(libraryId)), eq(bookmarks.userId, user.id)));
 }
 
 
 export async function updatePersonalNote(libraryId: string | number, personalNote: string | null, user: User): Promise<void> {
-  await sql`
-    UPDATE bookmarks SET personalnote = ${personalNote} WHERE user_id = ${user.id} AND library_id = ${libraryId}`;
+  await db.update(bookmarks).set({ personalNote: personalNote }).where(and(eq(bookmarks.libraryId, Number(libraryId)), eq(bookmarks.userId, user.id)));
 }
 
 
 export async function getBookmarkedLibs(id: string | number): Promise<LibraryItem[]> {
 
+  const res = await db
+    .select({
+      ...getTableColumns(libraries),
+      personalNote: bookmarks.personalNote,
+    }).from(libraries)
+    .innerJoin(bookmarks, eq(libraries.id, bookmarks.libraryId))
+    .where(eq(bookmarks.userId, Number(id)))
+    .orderBy(asc(libraries.name));
 
-  const libraries = await sql`
-    SELECT l.*, true AS isbookmarked, b.personalnote
-    FROM libraries l
-    INNER JOIN bookmarks b ON b.library_id = l.id
-    WHERE b.user_id = ${id}
-    ORDER BY l.name ASC
-  `;
-
-  return libraries.map(lib => ({
-    id: lib.id,
-    name: lib.name,
-    category: lib.category,
-    description: lib.description,
-    installCommand: lib.installcommand,
-    docsUrl: lib.docsurl,
-    isBookmarked: lib.isbookmarked,
-    personalNote: lib.personalnote,
-    createdBy: lib.created_by,
-    isProtected: lib.is_protected,
-    status: lib.status
-  }));
+  return res.map(item => ({ ...item, isBookmarked: true }));
 }
 
 
 export async function setBadge(visibility: string, isProtected: boolean, id: string | number) {
-  await sql`UPDATE libraries SET status = ${visibility}, is_protected = ${isProtected} WHERE id = ${id}`;
+  await db
+    .update(libraries)
+    .set({
+      status: visibility as ("pending" | "private" | "public"),
+      isProtected: isProtected
+    })
+    .where(eq(libraries.id, Number(id)));
 }

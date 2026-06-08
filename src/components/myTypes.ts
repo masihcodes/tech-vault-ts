@@ -7,7 +7,7 @@ export interface LibraryItem {
   description: string;
   installCommand: string;
   docsUrl: string;
-  isBookmarked: boolean;
+  isBookmarked?: boolean;
   personalNote: string | null;
   createdBy: number | null;
   isProtected: boolean;

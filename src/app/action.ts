@@ -19,8 +19,8 @@ export async function createLibAction(prev: ActionResponse | null, formData: For
 
     const res = await createLib({
       ...data,
-      isBookmarked: false,
-      personalNote: null,
+      // isBookmarked: false,
+      // personalNote: null,
       createdBy: user.id,
       isProtected: false,
       status: 'pending',
@@ -52,8 +52,8 @@ export async function updateLibAction(target: LibraryItem, prev: ActionResponse 
       const res = await updateLib({
         ...data,
         id: realLib.id,
-        isBookmarked: realLib.isBookmarked,
-        personalNote: realLib.personalNote,
+        // isBookmarked: realLib.isBookmarked,
+        // personalNote: realLib.personalNote,
         createdBy: realLib.createdBy,
         isProtected: realLib.isProtected,
         status: realLib.status,
@@ -73,8 +73,8 @@ export async function updateLibAction(target: LibraryItem, prev: ActionResponse 
       const res = await updateLib({
         ...data,
         id: realLib.id,
-        isBookmarked: realLib.isBookmarked,
-        personalNote: realLib.personalNote,
+        // isBookmarked: realLib.isBookmarked,
+        // personalNote: realLib.personalNote,
         createdBy: realLib.createdBy,
         isProtected: realLib.isProtected,
         status: "pending",
