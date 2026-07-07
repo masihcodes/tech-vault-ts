@@ -66,7 +66,7 @@ This project was built following strict software engineering principles, priorit
 
 ### 1. Clone & Install Dependencies
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/masihcodes/tech-vault-ts.git
 cd techVault-ts
 npm install
 ```
