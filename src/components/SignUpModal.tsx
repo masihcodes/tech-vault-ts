@@ -26,7 +26,11 @@ export default function SignUpModal() {
       setSignUpModalStatus(false);
 
     } else if (state && !state.success) {
-      toast.error(state?.message);
+      try {
+        JSON.parse(state.message).forEach((i: Record<string, string>) => toast.error(`${Object.keys(i)}: ${Object.values(i)}`));
+      } catch {
+        toast.error(state.message)
+      }
     }
   }, [state]);
 

@@ -1,35 +1,20 @@
 "use server";
 import { neon } from '@neondatabase/serverless';
-import { AuthCredentials, LibraryItem, User } from './myTypes';
+import { LibraryItem, User } from './myTypes';
 import { cookies } from 'next/headers';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { bookmarks, libraries, users } from '@/db/schema';
 import { and, asc, desc, eq, getTableColumns, ilike, or } from 'drizzle-orm';
 
+import jwt from "jsonwebtoken"
 
 
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql);
 
 
-export async function verifyUser(credentials: AuthCredentials): Promise<User | null> {
-  const [res] = await db
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role
-    })
-    .from(users)
-    .where(and(eq(users.email, credentials.email), eq(users.password, credentials.password)))
-    .limit(1);
 
-  if (!res) return null;
-  return res;
-}
-
-
-export async function createUser(name: string, email: string, password: string): Promise<User> {
+export async function createUser(name: string, email: string, password: string): Promise<Omit<User, 'password'>> {
   const [res] = await db
     .insert(users)
     .values({
@@ -49,7 +34,7 @@ export async function createUser(name: string, email: string, password: string):
 
 export async function findUserByEmail(email: string): Promise<User | null> {
   const [res] = await db
-    .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+    .select()
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
@@ -59,18 +44,56 @@ export async function findUserByEmail(email: string): Promise<User | null> {
 
 
 export async function getSessionUser(): Promise<User | null> {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth-token')?.value;
+  const ACCESS_SECRET = process.env.ACCESS_JWT_SECRET!;
+  const REFRESH_SECRET = process.env.REFRESH_JWT_SECRET!;
+  const TTL = Number(process.env.ACCESS_TOKEN_TTL);
+  const REFRESH_TTL = Number(process.env.REFRESH_TOKEN_TTL);
 
-  if (!userId) return null;
+  const cookie = await cookies();
+  const accessToken = cookie.get('accessToken')?.value;
+  const refreshToken = cookie.get('refreshToken')?.value;
 
-  const [res] = await db
-    .select({ id: users.id, name: users.name, email: users.email, role: users.role })
-    .from(users)
-    .where(eq(users.id, Number(userId)))
-    .limit(1);
-  if (!res) return null;
-  return res;
+  if (!accessToken && !refreshToken) return null;
+
+  if (accessToken) {
+    try {
+      const { id } = jwt.verify(accessToken, ACCESS_SECRET) as { id: string }
+      const [res] = await db.select().from(users).where(eq(users.id, Number(id))).limit(1)
+      if (!res) return null
+      return res
+    } catch { }
+  }
+
+  if (refreshToken) {
+    try {
+      const { id } = jwt.verify(refreshToken, REFRESH_SECRET) as { id: string }
+      const [res] = await db.select().from(users).where(eq(users.id, Number(id))).limit(1)
+      if (!res) return null
+
+      const newAccessToken = jwt.sign({ id }, ACCESS_SECRET, { expiresIn: TTL })
+      const newRefreshToken = jwt.sign({ id }, REFRESH_SECRET, { expiresIn: REFRESH_TTL })
+
+      cookie.set('accessToken', newAccessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: TTL,
+      })
+
+      cookie.set('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: REFRESH_TTL,
+      })
+      return res
+    } catch {
+      return null
+    }
+  }
+  return null
 }
 
 

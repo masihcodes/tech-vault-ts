@@ -1,10 +1,12 @@
 "use server";
 
-import { ActionResponse, SignupSchema } from '@/components/myTypes';
-import { createUser, findUserByEmail, verifyUser } from '@/components/neon';
+import { ActionResponse, SigninSchema, SignupSchema } from '@/components/myTypes';
+import { createUser, findUserByEmail } from '@/components/neon';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
-import { z } from 'zod';
+
+import bcrypt from 'bcrypt';
+import jwt from "jsonwebtoken"
 
 
 
@@ -13,22 +15,40 @@ import { z } from 'zod';
 
 export async function signInAction(prev: (ActionResponse | null), formData: FormData) {
   try {
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    const payload = Object.fromEntries(formData);
+    const { data, success, error } = SigninSchema.safeParse(payload);
 
-    if (!email || !password) return { success: false, message: 'Email and password are required' };
+    if (!success) {
+      const issue = error.issues.map(i => ({ [i.path.toString()]: i.message }))
+      return { success: false, message: JSON.stringify(issue) };
+    }
 
-    const user = await verifyUser({ email: email, password: password });
-
+    const user = await findUserByEmail(data.email);
     if (!user) return { success: false, message: 'Invalid email or password' };
 
-    const cookieStore = await cookies();
-    cookieStore.set('auth-token', user.id.toString(), {
+    const isMatch = await bcrypt.compare(data.password, user.password);
+    if (!isMatch) return { success: false, message: 'Invalid email or password' };
+
+
+    const accessToken = jwt.sign({ id: Number(user.id) }, process.env.ACCESS_JWT_SECRET!, { expiresIn: Number(process.env.ACCESS_TOKEN_TTL) })
+    const refreshToken = jwt.sign({ id: Number(user.id) }, process.env.REFRESH_JWT_SECRET!, { expiresIn: Number(process.env.REFRESH_TOKEN_TTL) })
+
+
+    const cookie = await cookies();
+    cookie.set('accessToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: Number(process.env.ACCESS_TOKEN_TTL),
+    });
+
+    cookie.set('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: Number(process.env.REFRESH_TOKEN_TTL),
     });
 
     revalidatePath('/');
@@ -46,23 +66,39 @@ export async function signUpAction(prev: (ActionResponse | null), formData: Form
     const payload = Object.fromEntries(formData);
     const { data, success, error } = SignupSchema.safeParse(payload);
 
-    if (!success) return { success: false, message: z.prettifyError(error) };
+    if (!success) {
+      const issue = error.issues.map(i => ({ [i.path.toString()]: i.message }))
+      return { success: false, message: JSON.stringify(issue) };
+    }
 
     const { name, email, password } = data;
 
     const res = await findUserByEmail(email);
-
     if (res) return { success: false, message: 'This email address already exists.' };
 
-    const user = await createUser(name, email, password);
+    const hashedPassword = await bcrypt.hash(password, 10)
+    const user = await createUser(name, email, hashedPassword);
 
-    const cookieStore = await cookies();
-    cookieStore.set('auth-token', user.id.toString(), {
+
+    const accessToken = jwt.sign({ id: Number(user.id) }, process.env.ACCESS_JWT_SECRET!, { expiresIn: Number(process.env.ACCESS_TOKEN_TTL) })
+    const refreshToken = jwt.sign({ id: Number(user.id) }, process.env.REFRESH_JWT_SECRET!, { expiresIn: Number(process.env.REFRESH_TOKEN_TTL) })
+
+
+    const cookie = await cookies();
+    cookie.set('accessToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: Number(process.env.ACCESS_TOKEN_TTL),
+    });
+
+    cookie.set('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: Number(process.env.REFRESH_TOKEN_TTL),
     });
 
     revalidatePath('/');
@@ -76,7 +112,8 @@ export async function signUpAction(prev: (ActionResponse | null), formData: Form
 
 
 export async function signOutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete('auth-token');
+  const cookie = await cookies();
+  cookie.delete('accessToken')
+  cookie.delete('refreshToken')
   revalidatePath('/');
 }
