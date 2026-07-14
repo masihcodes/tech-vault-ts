@@ -9,8 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@huggingface/inference": "^4.13.23",
     "@neondatabase/serverless": "^1.1.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
     "drizzle-orm": "^0.45.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.16.0",

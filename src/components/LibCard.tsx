@@ -88,6 +88,9 @@ export default function LibCard({ lib, user }: { lib: LibraryItem; user: (User |
         {lib.description}
       </p>
 
+      <img className="mb-4 w-full rounded-2xl" src={lib.imageUrl} alt="img" />
+      {/* <img className="mb-6 w-full max-h-60 rounded-2xl border border-slate-700/50 shadow-lg" src={lib.imageUrl} alt="img" /> */}
+
       <div className="flex w-full shadow-sm">
         <button
           onClick={() => handleDetails(lib)}

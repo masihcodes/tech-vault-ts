@@ -45,7 +45,7 @@ export default async function Home({ searchParams }: HomePageProps) {
       <LibList libPromise={libPromise} user={user} />
 
 
-      <Modal />
+      <Modal user={user} />
       <SignInModal />
       <SignUpModal />
       <BadgeModal />

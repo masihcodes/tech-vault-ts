@@ -1,22 +1,22 @@
 'use client';
 
 import { useActionState, useEffect, useTransition } from 'react';
-import { LibraryBig, Link, Loader, PackageX, Save, Terminal, X } from 'lucide-react';
+import { FileImage, LibraryBig, Link, Loader, PackageX, Save, Terminal, X } from 'lucide-react';
 import { resetTarget, setModalStatus, useLibStore } from './useLibStore';
 import { createLibAction, removeLibAction, updateLibAction } from '../app/action';
 import { toast } from 'sonner';
-import { ActionResponse } from './myTypes';
+import { ActionResponse, User } from './myTypes';
 
 
 
-export default function Modal() {
+export default function Modal({ user }: { user: User | null }) {
   const modalStatus = useLibStore((s) => s.modalStatus);
   if (!modalStatus) return null;
-  return <ModalContent />;
+  return <ModalContent user={user} />;
 }
 
 
-function ModalContent() {
+function ModalContent({ user }: { user: User | null }) {
 
 
   const target = useLibStore((s) => s.target);
@@ -92,7 +92,7 @@ function ModalContent() {
 
           <form action={formAction} className='space-y-4 overflow-y-auto p-6'>
             <label className='mb-1 block text-sm font-medium text-slate-400'>
-              Library Name
+              Library Name:
               <input
                 type='text'
                 name='name'
@@ -103,7 +103,7 @@ function ModalContent() {
             </label>
 
             <label className='mb-1 block text-sm font-medium text-slate-400'>
-              Category
+              Category:
               <select
                 name='category'
                 defaultValue={target.category}
@@ -117,7 +117,7 @@ function ModalContent() {
             </label>
 
             <label className='mb-1 block text-sm font-medium text-slate-400'>
-              Description
+              Description:
               <textarea
                 name='description'
                 defaultValue={target.description}
@@ -127,7 +127,7 @@ function ModalContent() {
             </label>
 
             <label className='mb-1 block text-sm font-medium text-slate-400'>
-              Install Command
+              Install Command:
               <div className='relative mt-1'>
                 <Terminal className='absolute left-3 top-3.5 text-slate-500' />
                 <input
@@ -141,7 +141,7 @@ function ModalContent() {
             </label>
 
             <label className='mb-1 block text-sm font-medium text-slate-400'>
-              Documentation URL
+              Documentation URL:
               <div className='relative mt-1'>
                 <Link className='absolute left-3 top-3 text-slate-500' />
                 <input
@@ -153,6 +153,27 @@ function ModalContent() {
                 />
               </div>
             </label>
+
+            {user?.role === 'admin' && (
+              <label className='mb-1 block text-sm font-medium text-slate-400'>
+                Image Or Icon:
+                <div className='flex items-center gap-x-1'>
+                  <div className='relative mt-1 flex-5'>
+                    <FileImage className='absolute left-3 top-3 text-slate-500' />
+                    <input
+                      name='imageFile'
+                      accept="image/png, image/jpeg, image/webp"
+                      type='file'
+                      className='w-full rounded-lg border border-slate-700 bg-slate-950 py-3 pl-11 pr-3 text-sm text-white transition-colors focus:border-cyan-500 focus:outline-none'
+                    />
+                  </div>
+                  <div className='flex-1 flex flex-col items-center py-1 bg-slate-950 rounded-lg border border-slate-700'>
+                    Apply AI: <input type="checkbox" name="ai" className='mt-1' />
+                  </div>
+                </div>
+              </label>
+            )}
+
 
             <div className='mt-10 flex flex-col items-center justify-center gap-5 border-t border-slate-800 pt-5 sm:flex-row'>
               <button

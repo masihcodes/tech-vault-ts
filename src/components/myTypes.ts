@@ -12,6 +12,7 @@ export interface LibraryItem {
   createdBy: number | null;
   isProtected: boolean;
   status: "public" | "private" | "pending";
+  imageUrl: string;
 }
 
 export interface LibraryItems {
@@ -83,9 +84,11 @@ export interface User {
   name: string;
   email: string;
   role: "admin" | "user";
-  password: string
 }
 
+export interface UserWithPassword extends User {
+  password: string;
+}
 
 
 
@@ -111,4 +114,14 @@ export const LibraryItemScheme = z.object({
   description: z.string().trim().min(10).max(300),
   installCommand: z.string().trim().min(5),
   docsUrl: z.url("Please enter a valid URL"),
+  ai: z.string().nullish().transform(v => { return v === 'on' }),
+  imageFile: z.custom<File>()
+    .refine((file) => {
+      if (!file || file.size === 0) return true;
+      return file.size <= 2 * 1024 * 1024;
+    }, "File size must be less than 2MB")
+    .refine((file) => {
+      if (!file || file.size === 0) return true;
+      return ["image/jpeg", "image/png", "image/webp"].includes(file.type);
+    }, "Only JPEG, PNG, and WebP files are allowed"),
 });

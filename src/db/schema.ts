@@ -22,7 +22,8 @@ export const libraries = pgTable("libraries", {
   docsUrl: text("docsurl").notNull(),
   createdBy: integer("created_by").references(() => users.id),
   isProtected: boolean("is_protected").default(false).notNull(),
-  status: status("status").default("public").notNull()
+  status: status("status").default("public").notNull(),
+  imageUrl: text("imageurl").default("/default-icon.png").notNull()
 });
 
 export const bookmarks = pgTable("bookmarks", {

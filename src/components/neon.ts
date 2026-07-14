@@ -1,6 +1,6 @@
 "use server";
 import { neon } from '@neondatabase/serverless';
-import { LibraryItem, User } from './myTypes';
+import { LibraryItem, User, UserWithPassword } from './myTypes';
 import { cookies } from 'next/headers';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { bookmarks, libraries, users } from '@/db/schema';
@@ -32,7 +32,7 @@ export async function createUser(name: string, email: string, password: string):
 }
 
 
-export async function findUserByEmail(email: string): Promise<User | null> {
+export async function findUserByEmail(email: string): Promise<UserWithPassword | null> {
   const [res] = await db
     .select()
     .from(users)
@@ -58,7 +58,15 @@ export async function getSessionUser(): Promise<User | null> {
   if (accessToken) {
     try {
       const { id } = jwt.verify(accessToken, ACCESS_SECRET) as { id: string }
-      const [res] = await db.select().from(users).where(eq(users.id, Number(id))).limit(1)
+      const [res] = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.id, Number(id))).limit(1)
       if (!res) return null
       return res
     } catch { }
@@ -67,7 +75,14 @@ export async function getSessionUser(): Promise<User | null> {
   if (refreshToken) {
     try {
       const { id } = jwt.verify(refreshToken, REFRESH_SECRET) as { id: string }
-      const [res] = await db.select().from(users).where(eq(users.id, Number(id))).limit(1)
+      const [res] = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+        })
+        .from(users).where(eq(users.id, Number(id))).limit(1)
       if (!res) return null
 
       const newAccessToken = jwt.sign({ id }, ACCESS_SECRET, { expiresIn: TTL })
@@ -204,6 +219,7 @@ export async function updateLib(data: Omit<LibraryItem, 'isBookmarked' | 'person
       description: data.description,
       installCommand: data.installCommand,
       docsUrl: data.docsUrl,
+      imageUrl: data.imageUrl,
       createdBy: data.createdBy!,
       isProtected: data.isProtected,
       status: data.status,
