@@ -18,7 +18,7 @@
 
 **TechVault** is an enterprise-grade, fully typed Full-Stack web application engineered to discover, bookmark, and manage developer tools and libraries. It serves as an interactive "Tech Radar" where developers can document solutions, save CLI installation commands, and attach personal engineering notes to their favorite packages.
 
-Built with the latest **Next.js 15 App Router** and **React 19**, this repository represents the **TypeScript implementation** of the project. It features a **Stateless Dual-Token JWT Authentication**, **End-to-End Type Safety**, **Secure-by-Default Architecture (DTO Pattern)**, **runtime payload validation with Zod**, **automated AI icon generation**, and relational database modeling using **Drizzle ORM** with **Neon Serverless Postgres**.
+Built with the latest **Next.js 15 App Router** and **React 19**, this repository represents the **TypeScript implementation** of the project. It features a **Stateless Dual-Token JWT Authentication**, **End-to-End Type Safety**, **Secure-by-Default Architecture (DTO Pattern)**, **runtime payload validation with Zod**, an **AI-powered coding assistant (Agent Auto-Fill)**, **automated AI icon generation**, and relational database modeling using **Drizzle ORM** with **Neon Serverless Postgres**.
 
 ---
 
@@ -48,11 +48,12 @@ This project was built following strict software engineering principles, priorit
 - **Admin Role:** Possesses full override capabilities, including updating any library, toggling protection locks (`isProtected`), managing visibility badges (`public`, `private`, `pending`), and exclusive permissions to upload custom images or trigger automated AI icon generation.
 - **Zod Runtime Parsing:** Bridges client-side form submissions and server-side mutations safely, utilizing native transformations (`nullish().transform(...)`) to map multipart form payloads and JSON validation errors elegantly into UI toast notifications.
 
-### 4. 🤖 AI-Powered Content & Cloud Object Storage
+### 4. 🤖 AI-Powered Content, Smart Agent & Cloud Storage
 
-- **Automated AI Icon Generation:** Integrates the `@huggingface/inference` API (utilizing models like **FLUX.1-schnell** and **SDXL**) to dynamically generate custom sci-fi vector icons whenever libraries are created without a custom logo.
-- **On-the-Fly Cloud Processing:** Leverages **Cloudinary** for secure multipart image uploads, automatic center-gravity cropping (`200x200`), and lightweight WebP compression.
-- **Zero-Leaked Cloud Resources (Orphan Cleanup):** Features an automated cloud garbage-collection pipeline that immediately destroys orphaned Cloudinary blobs when libraries are removed or custom icons are updated.
+- **AI Agent Assistant (Auto-Fill):** Features a generative AI assistant powered by **Qwen / Llama LLM models** via Hugging Face. By entering a library name and clicking "AI Agent Help ✨", the assistant dynamically researches and populates the concise description, standard npm installation command, and official documentation URL in real-time.
+- **Fault-Tolerant JSON Extraction:** The AI agent pipeline incorporates advanced regular expressions (`rawText.match(/\{[\s\S]*\}/)`) to safely extract structured JSON payloads from raw LLM responses, eliminating syntax errors caused by markdown wrappers or conversational hallucinations.
+- **Automated AI Icon Generation:** Integrates the `@huggingface/inference` API (utilizing models like **SDXL / FLUX.1**) to dynamically generate custom sci-fi vector icons whenever libraries are created without a custom logo.
+- **On-the-Fly Cloud Processing & Orphan Cleanup:** Leverages **Cloudinary** for secure multipart image uploads, automatic center-gravity cropping (`200x200`), and lightweight WebP compression. Features an automated cloud garbage-collection pipeline that immediately destroys orphaned images upon library updates or removals.
 
 ### 5. 🗄️ Relational Database Modeling via Drizzle ORM
 
@@ -62,7 +63,7 @@ This project was built following strict software engineering principles, priorit
 ### 6. ⚡ Bleeding-Edge Next.js 15 & React 19 Patterns
 
 - **Server Actions & Cache Revalidation:** Bypasses traditional REST APIs by utilizing Next.js Server Actions (`"use server"`) combined with granular cache invalidation (`revalidatePath`) for instant UI synchronization.
-- **React 19 Async Hooks:** Leverages React 19's native `use(libPromise)` hook inside Client Components (`LibList.tsx`) to unwrap server-fetched data streams, paired with `useActionState` and `useTransition` for non-blocking, optimistic UI form mutations.
+- **React 19 Async Hooks & Controlled UI:** Leverages React 19's native `use(libPromise)` hook inside Client Components (`LibList.tsx`), paired with `useActionState` and `useTransition` for non-blocking, optimistic form mutations and live controlled component updates.
 
 ### 7. 🎛️ Hybrid State Management (URL + Client Store)
 
@@ -71,8 +72,9 @@ This project was built following strict software engineering principles, priorit
 
 ---
 
-### ✨ Key Features
+## ✨ Key Features
 
+- **🪄 Smart AI Auto-Fill:** Type any tool name and let the AI coding assistant automatically fetch its description, installation CLI command, and docs URL.
 - **🤖 AI Icon Generator:** Automatically generates sleek, cyberpunk-themed vector logos for tools using Hugging Face models if no custom image is uploaded.
 - **☁️ Optimized Cloud Media:** Fast image delivery and automatic WebP compression powered by Cloudinary, backed by automated orphan file cleanup.
 - **🔍 Real-Time Explore & Filter:** Search through libraries instantly with debounced inputs and sort by alphabetical order, newest additions, or oldest entries.
@@ -134,7 +136,7 @@ npm run dev
 │   │   ├── mylib/
 │   │   │   ├── action.ts         # Dedicated Server Actions for Tech Radar (Notes update, remove bookmark)
 │   │   │   └── page.tsx          # My Tech Radar Route (Server Component enforcing Auth & bookmark joins)
-│   │   ├── action.ts             # Global Server Actions with Zod validation, RBAC checks, & Cloudinary cleanup
+│   │   ├── action.ts             # Global Server Actions with Zod validation, RBAC checks, & Agent delegation
 │   │   ├── error.tsx             # Next.js native Global Error Boundary UI
 │   │   ├── layout.tsx            # Root Layout (JetBrains Mono font setup, Navbar, Footer, Sonner Toaster)
 │   │   ├── loading.tsx           # Global Suspense Loading fallback animation
@@ -142,13 +144,14 @@ npm run dev
 │   │
 │   ├── components/
 │   │   ├── AddButton.tsx         # Client Component button triggering modals based on Auth state
+│   │   ├── agentService.ts       # AI Agent logic utilizing LLMs (Qwen/Llama) and robust Regex JSON extraction
 │   │   ├── BadgeModal.tsx        # Admin-only controlled dialog for updating library status and protection
 │   │   ├── FilterBar.tsx         # URL-driven debounced Search input and Sorting dropdown
 │   │   ├── Footer.tsx            # Sticky responsive application footer
 │   │   ├── imageService.ts       # Cloudinary upload/deletion & Hugging Face AI text-to-image logic
 │   │   ├── LibCard.tsx           # Individual Library Card UI featuring status badges & bookmark triggers
 │   │   ├── LibList.tsx           # React 19 Client Component utilizing native `use(libPromise)` hook
-│   │   ├── Modal.tsx             # Controlled CRUD Dialog powered by React 19 `useActionState` & RBAC inputs
+│   │   ├── Modal.tsx             # Controlled CRUD Dialog powered by React 19 hooks & AI Auto-fill trigger
 │   │   ├── MyLibCard.tsx         # Dedicated Card UI for saved items featuring inline Note Editing
 │   │   ├── MyLibs.tsx            # Grid layout wrapper managing initial Sonner toast notifications
 │   │   ├── Navbar.tsx            # Top navigation bar displaying user role badges and Auth triggers
@@ -166,5 +169,5 @@ npm run dev
 ├── next.config.mjs               # Next.js project configuration
 ├── package.json                  # Project dependencies and npm scripts
 ├── tsconfig.json                 # TypeScript compiler options and strict typing rules
-└── tailwind.config.js            # Tailwind CSS and custom styling design system and custom styling design system# Tailwind CSS and custom styling design system
+└── tailwind.config.js            # Tailwind CSS and custom styling design system
 ```

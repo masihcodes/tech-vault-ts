@@ -7,6 +7,11 @@ import { createLibAction, removeLibAction, updateLibAction } from '../app/action
 import { toast } from 'sonner';
 import { ActionResponse, User } from './myTypes';
 
+import { useState } from 'react';
+import { Sparkles } from 'lucide-react';
+import { agentAssistAction } from '../app/action';
+
+
 
 
 export default function Modal({ user }: { user: User | null }) {
@@ -21,6 +26,38 @@ function ModalContent({ user }: { user: User | null }) {
 
   const target = useLibStore((s) => s.target);
   const newEntryStatus = useLibStore((s) => s.newEntryStatus);
+
+
+
+
+
+
+  const [name, setName] = useState(target.name || '');
+  const [description, setDescription] = useState(target.description || '');
+  const [installCommand, setInstallCommand] = useState(target.installCommand || '');
+  const [docsUrl, setDocsUrl] = useState(target.docsUrl || '');
+
+
+  const [agentPending, startAgentTransition] = useTransition()
+
+  function handleAgentHelp() {
+    startAgentTransition(async () => {
+      const res = await agentAssistAction(name);
+      if (res.success && res.data) {
+        setDescription(res.data.description);
+        setInstallCommand(res.data.installCommand);
+        setDocsUrl(res.data.docsUrl);
+        toast.success(`✨ AI Agent successfully filled details for "${name}"!`);
+      } else {
+        toast.error(res.message);
+      }
+    });
+  }
+
+
+
+
+
 
 
   // const [state, formAction, pending] = useActionState<ActionResponse | null, FormData>(newEntryStatus ? createLibAction : updateLibAction.bind(null, target), null,);
@@ -91,13 +128,24 @@ function ModalContent({ user }: { user: User | null }) {
           </div>
 
           <form action={formAction} className='space-y-4 overflow-y-auto p-6'>
-            <label className='mb-1 block text-sm font-medium text-slate-400'>
-              Library Name:
+            <label className='relative mb-1 block text-sm font-medium text-slate-400'>
+              <div className='flex items-center justify-between mb-1'>
+                <span>Library Name:</span>
+                <button
+                  type='button'
+                  onClick={handleAgentHelp}
+                  disabled={agentPending || !name || name.trim().length < 2}
+                  className='absolute right-3 top-8.5 flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.2)] transition-all  hover:bg-cyan-500 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40 '>
+                  {agentPending ? <Loader className='h-3 w-3 animate-spin' /> : <Sparkles className='h-3 w-3' />}
+                  {agentPending ? 'Agent is thinking...' : 'AI Agent Help ✨'}
+                </button>
+              </div>
               <input
                 type='text'
                 name='name'
-                className='mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 p-3 text-white transition-colors focus:border-cyan-500 focus:outline-none'
-                defaultValue={target.name}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className='w-full rounded-lg border border-slate-700 bg-slate-950 p-3 text-white transition-colors focus:border-cyan-500 focus:outline-none'
                 placeholder='e.g., Framer Motion'
               />
             </label>
@@ -120,7 +168,9 @@ function ModalContent({ user }: { user: User | null }) {
               Description:
               <textarea
                 name='description'
-                defaultValue={target.description}
+                // defaultValue={target.description}
+                onChange={(e) => setDescription(e.target.value)}
+                value={description}
                 rows={4}
                 placeholder='What problem does it solve?'
                 className='mt-1 w-full resize-none rounded-lg border border-slate-700 bg-slate-950 p-3 text-white transition-colors focus:border-cyan-500 focus:outline-none'></textarea>
@@ -132,7 +182,9 @@ function ModalContent({ user }: { user: User | null }) {
                 <Terminal className='absolute left-3 top-3.5 text-slate-500' />
                 <input
                   name='installCommand'
-                  defaultValue={target.installCommand}
+                  // defaultValue={target.installCommand}
+                  onChange={(e) => setInstallCommand(e.target.value)}
+                  value={installCommand}
                   type='text'
                   placeholder='npm install ....'
                   className='w-full rounded-lg border border-slate-700 bg-slate-950 py-3 pl-10 pr-3 font-mono text-sm text-cyan-400 transition-colors focus:border-cyan-500 focus:outline-none'
@@ -146,7 +198,9 @@ function ModalContent({ user }: { user: User | null }) {
                 <Link className='absolute left-3 top-3 text-slate-500' />
                 <input
                   name='docsUrl'
-                  defaultValue={target.docsUrl}
+                  // defaultValue={target.docsUrl}
+                  onChange={(e) => setDocsUrl(e.target.value)}
+                  value={docsUrl}
                   type='text'
                   placeholder='https://...'
                   className='w-full rounded-lg border border-slate-700 bg-slate-950 py-3 pl-11 pr-3 text-sm text-white transition-colors focus:border-cyan-500 focus:outline-none'

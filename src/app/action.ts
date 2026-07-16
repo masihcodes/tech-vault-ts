@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { v2 as cloudinary } from 'cloudinary';
 import { deleteFromCloudinary, imageUrlFromUserAI, imageUrlFromUserFile } from '@/components/imageService';
+import { generateLibraryDetails, AgentResponse } from '@/components/agentService';
 
 
 
@@ -15,6 +16,32 @@ cloudinary.config({
   api_key: process.env.CLOUD_API_KEY,
   api_secret: process.env.CLOUD_SECRET,
 });
+
+
+
+
+
+
+export async function agentAssistAction(name: string): Promise<{ success: boolean; data?: AgentResponse; message?: string }> {
+  try {
+    const user = await getSessionUser();
+    if (!user) return { success: false, message: 'Please sign in first' };
+
+    if (!name || name.trim().length < 2) {
+      return { success: false, message: 'Please type a valid library name first (at least 2 characters)' };
+    }
+
+    const details = await generateLibraryDetails(name.trim());
+    if (!details) {
+      return { success: false, message: 'AI Agent could not find details for this library. Please fill manually.' };
+    }
+
+    return { success: true, data: details };
+  } catch (error: unknown) {
+    return error instanceof Error ? { success: false, message: error.message } : { success: false, message: 'Agent failed' };
+  }
+}
+
 
 
 export async function createLibAction(prev: ActionResponse | null, formData: FormData): Promise<ActionResponse> {
