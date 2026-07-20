@@ -125,3 +125,14 @@ export const LibraryItemScheme = z.object({
       return ["image/jpeg", "image/png", "image/webp"].includes(file.type);
     }, "Only JPEG, PNG, and WebP files are allowed"),
 });
+
+
+
+
+
+
+export interface AgentResponse {
+  description: string;
+  installCommand: string;
+  docsUrl: string;
+}

@@ -1,4 +1,4 @@
-# ⚡ TechVault (DevStack Vault) — Enterprise Full-Stack Tech Radar
+# ⚡ TechVault (DevStack Vault)
 
 <div align="left">
   <img src="https://img.shields.io/badge/Next.js_15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
@@ -14,65 +14,21 @@
   <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
 </div>
 
-<br />
+<br>
 
-**TechVault** is an enterprise-grade, fully typed Full-Stack web application engineered to discover, bookmark, and manage developer tools and libraries. It serves as an interactive "Tech Radar" where developers can document solutions, save CLI installation commands, and attach personal engineering notes to their favorite packages.
+### 🏗️ Architectural Highlights
 
-Built with the latest **Next.js 15 App Router** and **React 19**, this repository represents the **TypeScript implementation** of the project. It features a **Stateless Dual-Token JWT Authentication**, **End-to-End Type Safety**, **Secure-by-Default Architecture (DTO Pattern)**, **runtime payload validation with Zod**, an **AI-powered coding assistant (Agent Auto-Fill)**, **automated AI icon generation**, and relational database modeling using **Drizzle ORM** with **Neon Serverless Postgres**.
+This project isn't just a basic CRUD app. It follows strict software engineering standards to handle real-world challenges:
 
----
+- **🔒 Secure by Default (JWT & DTOs):** Uses stateless Dual-Token JWT authentication stored in encrypted HTTP-only cookies. Strict Data Transfer Objects (DTOs) guarantee sensitive data—like password hashes—never leak to the frontend.
+- **🤖 Built-in AI Agent & Auto-Fill:** Integrated with Hugging Face (Qwen / LLM models) to act as a coding assistant. Type a library name, click "AI Agent Help ✨", and the app automatically researches and fills in the description, npm install command, and official docs URL.
+- **🎨 AI Icon Generator & Cloud Storage:** Automatically generates sleek vector logos for tools without icons using Stable Diffusion / FLUX. Images are uploaded to **Cloudinary** for WebP compression, with an automated cleanup system that deletes orphaned cloud files.
+- **⚡ Bleeding-Edge Next.js & React 19:** Replaces traditional REST APIs with Next.js Server Actions. It uses React 19's native `use()` hook, `useTransition`, and `useActionState` for fast, optimistic UI updates without freezing the screen.
+- **🗄️ Type-Safe Database & RBAC:** Powered by **Drizzle ORM** and **Neon Serverless Postgres** with clean relational joins, Role-Based Access Control (Admin vs. User permissions), and Zod runtime validation for all form inputs.
 
-### Live Demo: https://tech-vault-ts.vercel.app/
+<br>
 
----
-
-### 🏗️ Engineering & Architectural Highlights
-
-This project was built following strict software engineering principles, prioritizing security, scalability, data integrity, and optimal User Experience (UX):
-
-### 1. 🛡️ Advanced Security & Stateless Authentication (JWT)
-
-- **Dual-Token Rotation:** Implements a highly secure authentication flow using short-lived `Access Tokens` and long-lived `Refresh Tokens` encoded via `jsonwebtoken`.
-- **Bcrypt Password Hashing:** Protects user credentials by hashing passwords using `bcrypt` before database persistence.
-- **Secure Cookie Storage:** Tokens are strictly managed via encrypted HTTP-only, SameSite, and secure browser cookies to prevent XSS and CSRF attacks.
-- **Stripped Session Payloads:** Enforces a strict DTO pattern on session queries (`UserWithPassword` vs. `User`), guaranteeing sensitive password hashes are stripped at the ORM layer before reaching client sessions.
-
-### 2. 🧱 Secure-by-Default Architecture & DTO Pattern
-
-- **Data Transfer Objects (DTO):** Enforces strict serialization boundaries between the Server and Client Components.
-- **Zero Data Leaks:** Database queries are explicitly selected (`.select({ id, name, email })`) at the ORM level, ensuring sensitive information never leaves the database layer or reaches the React frontend.
-
-### 3. 🔐 Role-Based Access Control (RBAC) & Zod Validation
-
-- **User Role:** Can create libraries (defaulting to `pending` status) and can only edit or delete non-protected libraries that they originally created.
-- **Admin Role:** Possesses full override capabilities, including updating any library, toggling protection locks (`isProtected`), managing visibility badges (`public`, `private`, `pending`), and exclusive permissions to upload custom images or trigger automated AI icon generation.
-- **Zod Runtime Parsing:** Bridges client-side form submissions and server-side mutations safely, utilizing native transformations (`nullish().transform(...)`) to map multipart form payloads and JSON validation errors elegantly into UI toast notifications.
-
-### 4. 🤖 AI-Powered Content, Smart Agent & Cloud Storage
-
-- **AI Agent Assistant (Auto-Fill):** Features a generative AI assistant powered by **Qwen / Llama LLM models** via Hugging Face. By entering a library name and clicking "AI Agent Help ✨", the assistant dynamically researches and populates the concise description, standard npm installation command, and official documentation URL in real-time.
-- **Fault-Tolerant JSON Extraction:** The AI agent pipeline incorporates advanced regular expressions (`rawText.match(/\{[\s\S]*\}/)`) to safely extract structured JSON payloads from raw LLM responses, eliminating syntax errors caused by markdown wrappers or conversational hallucinations.
-- **Automated AI Icon Generation:** Integrates the `@huggingface/inference` API (utilizing models like **SDXL / FLUX.1**) to dynamically generate custom sci-fi vector icons whenever libraries are created without a custom logo.
-- **On-the-Fly Cloud Processing & Orphan Cleanup:** Leverages **Cloudinary** for secure multipart image uploads, automatic center-gravity cropping (`200x200`), and lightweight WebP compression. Features an automated cloud garbage-collection pipeline that immediately destroys orphaned images upon library updates or removals.
-
-### 5. 🗄️ Relational Database Modeling via Drizzle ORM
-
-- **Modern ORM Architecture:** Replaces raw SQL queries with **Drizzle ORM** (`drizzle-orm/neon-http`) for type-safe database queries, migrations, and zero-cold-start serverless execution on **Neon Postgres**.
-- **Relational Schema Design:** Cleanly defines tables, enums (`userRole`, `status`), and cascading foreign-key relationships (`users` ↔ `libraries` ↔ `bookmarks`). Utilizes advanced SQL joins (`leftJoin`, `innerJoin`) to fetch user-specific bookmark states in a single optimized query.
-
-### 6. ⚡ Bleeding-Edge Next.js 15 & React 19 Patterns
-
-- **Server Actions & Cache Revalidation:** Bypasses traditional REST APIs by utilizing Next.js Server Actions (`"use server"`) combined with granular cache invalidation (`revalidatePath`) for instant UI synchronization.
-- **React 19 Async Hooks & Controlled UI:** Leverages React 19's native `use(libPromise)` hook inside Client Components (`LibList.tsx`), paired with `useActionState` and `useTransition` for non-blocking, optimistic form mutations and live controlled component updates.
-
-### 7. 🎛️ Hybrid State Management (URL + Client Store)
-
-- **URL-Driven Search & Sort:** Synchronizes search queries and sorting filters (`/?q=...&sort=...`) directly with URL parameters using debounced routing (`useRef` + `router.replace`), enabling shareable links and efficient server-side filtering.
-- **Client UI Store:** Utilizes **Zustand** for lightweight, predictable client-side modal toggling, user auth prompts, and active-target state management.
-
----
-
-## ✨ Key Features
+### ✨ Key Features
 
 - **🪄 Smart AI Auto-Fill:** Type any tool name and let the AI coding assistant automatically fetch its description, installation CLI command, and docs URL.
 - **🤖 AI Icon Generator:** Automatically generates sleek, cyberpunk-themed vector logos for tools using Hugging Face models if no custom image is uploaded.
@@ -86,7 +42,13 @@ This project was built following strict software engineering principles, priorit
 
 ---
 
-## 🛠️ Quick Start & Setup
+### Live Demo: https://tech-vault-ts.vercel.app/
+
+---
+
+<br>
+
+### 🛠️ Quick Start & Setup
 
 ### 1. Clone & Install Dependencies
 

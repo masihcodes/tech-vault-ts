@@ -2,21 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { createLib, getLibById, getSessionUser, removeLib, setBadge, toggleBookmark, updateLib } from '../components/neon';
-import { ActionResponse, LibraryItem, LibraryItemScheme } from '@/components/myTypes';
+import { ActionResponse, AgentResponse, LibraryItem, LibraryItemScheme } from '@/components/myTypes';
 import { z } from 'zod';
 
-import { v2 as cloudinary } from 'cloudinary';
+
 import { deleteFromCloudinary, imageUrlFromUserAI, imageUrlFromUserFile } from '@/components/imageService';
-import { generateLibraryDetails, AgentResponse } from '@/components/agentService';
-
-
-
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.CLOUD_API_KEY,
-  api_secret: process.env.CLOUD_SECRET,
-});
-
+import { generateLibraryDetails } from '@/components/agentService';
 
 
 
@@ -62,7 +53,6 @@ export async function createLibAction(prev: ActionResponse | null, formData: For
       imageUrl = await imageUrlFromUserFile(imageFile)
     }
 
-    // const imageUrl = await getOrGenerateImageUrl(imageFile, data.name, data.description);
 
     const res = await createLib({
       ...libData,

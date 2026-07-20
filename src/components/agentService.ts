@@ -1,12 +1,24 @@
 import { InferenceClient } from '@huggingface/inference';
+import { AgentResponse } from './myTypes';
+
+
 
 const hf = new InferenceClient(process.env.HUG_ACC_TOK);
 
-export interface AgentResponse {
-  description: string;
-  installCommand: string;
-  docsUrl: string;
-}
+const AGENT_MODELS = [
+  'Qwen/Qwen2.5-Coder-7B-Instruct',
+  'Qwen/Qwen2.5-Coder-32B-Instruct',
+  'mistralai/Mistral-7B-Instruct-v0.3',
+  'microsoft/Phi-3-mini-4k-instruct',
+  'HuggingFaceH4/zephyr-7b-beta',
+  'Qwen/Qwen2.5-7B-Instruct',
+
+  //  'deepseek-ai/DeepSeek-Coder-V2-Instruct',
+  //  'meta-llama/Llama-3.1-8B-Instruct',
+  //  'mistralai/Codestral-22B-v0.1',
+  //  'google/gemma-3-27b-it',
+];
+
 
 export async function generateLibraryDetails(name: string): Promise<AgentResponse | null> {
   const prompt = `You are an expert software engineer assistant. I will provide the name of a developer tool or library: "${name}".
@@ -18,25 +30,30 @@ The JSON format must be exactly:
   "docsUrl": "The official documentation website URL (must start with https://)."
 }`;
 
-  try {
-    const response = await hf.chatCompletion({
-      model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 300,
-      temperature: 0.1,
-    });
 
-    const rawText = response.choices[0].message.content || '';
+  for (const model of AGENT_MODELS) {
+    try {
+      const response = await hf.chatCompletion({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 300,
+        temperature: 0.1,
+      });
 
-    // const cleanedJson = rawText.replace(/```json|```/g, '').trim();
-    const cleanedJson = rawText.match(/\{[\s\S]*\}/);
-    if (!cleanedJson) {
-      throw new Error('AI did not return a valid JSON structure please try again');
+      const rawText = response.choices[0].message.content || '';
+
+      // const cleanedJson = rawText.replace(/```json|```/g, '').trim();
+      const cleanedJson = rawText.match(/\{[\s\S]*\}/);
+      if (!cleanedJson)
+        throw new Error('AI did not return a valid JSON structure please try again');
+
+      return JSON.parse(cleanedJson[0]) as AgentResponse;
     }
-    return JSON.parse(cleanedJson[0]) as AgentResponse;
-  } catch (error) {
-    console.error('AI Agent execution error:', error);
-    return null;
+    catch (error) {
+      console.error('AI Agent execution error:', error);
+      return null;
+    }
   }
+  console.error('All AI Agent models failed.');
+  return null;
 }
-
